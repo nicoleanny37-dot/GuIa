@@ -1,0 +1,13 @@
+{
+  "name": "guia-acessibilidade-875c",
+  "version": "1.0.0",
+  "description": "GuIa: Assistente de Navegação em Ônibus por Voz, Vibração e Alto Contraste para Pessoas com Deficiência Visual",
+  "main": "js/app.js",
+  "scripts": {
+    "start": "npx serve .",
+    "test": "node tests/guia-tests.js"
+  },
+  "keywords": ["acessibilidade", "transporte-publico", "sptrans", "875c-10", "tts", "haptics"],
+  "author": "GuIa Team",
+  "license": "MIT"
+}
