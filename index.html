@@ -103,6 +103,9 @@ body[data-s=listening] .mic::after{animation:ring 1.6s ease-out .8s infinite}
 .ring{width:160px;height:160px;border-radius:50%;margin:8px auto;display:grid;place-items:center;background:conic-gradient(#fc5f5f var(--p),var(--line) 0);flex:none}
 .ring>div{width:132px;height:132px;border-radius:50%;background:var(--bg);display:grid;place-content:center;text-align:center}
 .ring b{font-size:48px;font-weight:800;line-height:1}.ring small{font-size:14px;color:var(--muted)}
+.loc{display:flex;gap:12px;align-items:center;border:2px solid var(--line);border-radius:16px;padding:12px 14px;font-size:15px}
+.loc .ic{font-size:26px}.loc b{display:block;font-size:15px}.loc small{display:block;color:var(--muted);font-size:13px;font-weight:500}
+.loc.real{border-color:var(--ok)}.loc.real b{color:var(--ok)}
 </style>
 </head>
 <body>
@@ -121,8 +124,8 @@ const LINHA_875C10 = {
   tempo_medio: "1h15 - 1h30",
   paradas: [
     { id: 1, nome: "Terminal Lapa — Plataforma Interna Linha 875C-10", nome_curto: "Terminal Lapa", distrito: "Lapa", lat: -23.518600, lng: -46.697400, tipo: "Terminal de Origem",
-      apelidos: ["ponto inicial", "inicio da linha", "primeira parada"], ruas: [], numeros: [], bairros: ["lapa"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: ["terminal lapa"],
-      palavras_chave: ["ponto inicial", "inicio da linha", "primeira parada", "terminal lapa", "lapa"] },
+      apelidos: ["ponto inicial", "inicio da linha", "primeira parada"], ruas: [], numeros: [], bairros: ["lapa"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: ["terminal lapa", "terminal"],
+      palavras_chave: ["ponto inicial", "inicio da linha", "primeira parada", "terminal lapa", "terminal", "lapa"] },
     { id: 2, nome: "Rua Roma, 636", nome_curto: "Rua Roma", distrito: "Lapa", lat: -23.522100, lng: -46.696100, tipo: "Parada Convencional",
       apelidos: [], ruas: ["rua roma", "roma"], numeros: ["636"], bairros: ["lapa"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
       palavras_chave: ["rua roma", "roma", "636", "lapa"] },
@@ -187,8 +190,8 @@ const LINHA_875C10 = {
       apelidos: [], ruas: ["avenida brigadeiro faria lima", "av brigadeiro faria lima", "brigadeiro faria lima", "av faria lima", "faria lima"], numeros: ["398"], bairros: ["pinheiros"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
       palavras_chave: ["avenida brigadeiro faria lima", "av brigadeiro faria lima", "brigadeiro faria lima", "av faria lima", "faria lima", "398", "pinheiros"] },
     { id: 23, nome: "Avenida Brigadeiro Faria Lima, 682 — Largo da Batata / Metrô Faria Lima", nome_curto: "Metrô Faria Lima", distrito: "Pinheiros", lat: -23.567300, lng: -46.694800, tipo: "Conexão Metrô (Linha 4-Amarela)",
-      apelidos: ["largo da batata", "batata"], ruas: ["avenida brigadeiro faria lima", "av brigadeiro faria lima", "brigadeiro faria lima", "av faria lima", "faria lima"], numeros: ["682"], bairros: ["pinheiros"], metros: ["metro faria lima", "estacao faria lima", "linha 4 amarela", "linha amarela"], faculdades: [], hospitais: [], pontos_turisticos: ["largo da batata"],
-      palavras_chave: ["largo da batata", "batata", "metro faria lima", "estacao faria lima", "linha 4 amarela", "linha amarela", "avenida brigadeiro faria lima", "av brigadeiro faria lima", "brigadeiro faria lima", "av faria lima", "faria lima", "682", "pinheiros"] },
+      apelidos: ["largo da batata", "batata"], ruas: ["avenida brigadeiro faria lima", "av brigadeiro faria lima", "brigadeiro faria lima", "av faria lima", "faria lima"], numeros: ["682"], bairros: ["pinheiros"], metros: ["metro faria lima", "estacao faria lima", "linha 4 amarela", "linha 4", "linha amarela", "metro", "estacao"], faculdades: [], hospitais: [], pontos_turisticos: ["largo da batata"],
+      palavras_chave: ["largo da batata", "batata", "metro faria lima", "estacao faria lima", "linha 4 amarela", "linha 4", "linha amarela", "metro", "estacao", "avenida brigadeiro faria lima", "av brigadeiro faria lima", "brigadeiro faria lima", "av faria lima", "faria lima", "682", "pinheiros"] },
     { id: 24, nome: "Avenida Brigadeiro Faria Lima, 1384", nome_curto: "Faria Lima, 1384", distrito: "Pinheiros", lat: -23.573100, lng: -46.689600, tipo: "Eixo Corporativo",
       apelidos: [], ruas: ["avenida brigadeiro faria lima", "av brigadeiro faria lima", "brigadeiro faria lima", "av faria lima", "faria lima"], numeros: ["1384"], bairros: ["pinheiros"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
       palavras_chave: ["avenida brigadeiro faria lima", "av brigadeiro faria lima", "brigadeiro faria lima", "av faria lima", "faria lima", "1384", "pinheiros"] },
@@ -241,14 +244,14 @@ const LINHA_875C10 = {
       apelidos: [], ruas: ["avenida professor ascendino reis", "professor ascendino reis", "ascendino reis", "ascendino"], numeros: ["1245"], bairros: ["vila clementino"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
       palavras_chave: ["avenida professor ascendino reis", "professor ascendino reis", "ascendino reis", "ascendino", "1245", "vila clementino"] },
     { id: 41, nome: "Avenida Professor Ascendino Reis, 2524 — Estação AACD-Servidor", nome_curto: "Estação AACD", distrito: "Vila Clementino", lat: -23.598800, lng: -46.649800, tipo: "Conexão Metrô (Linha 5-Lilás)",
-      apelidos: [], ruas: ["avenida professor ascendino reis", "professor ascendino reis", "ascendino reis", "ascendino"], numeros: ["2524"], bairros: ["vila clementino"], metros: ["estacao aacd servidor", "estacao aacd", "aacd servidor", "metro aacd", "linha 5 lilas", "linha lilas"], faculdades: [], hospitais: ["aacd", "hospital aacd"], pontos_turisticos: [],
-      palavras_chave: ["estacao aacd servidor", "estacao aacd", "aacd servidor", "metro aacd", "linha 5 lilas", "linha lilas", "aacd", "hospital aacd", "avenida professor ascendino reis", "professor ascendino reis", "ascendino reis", "ascendino", "2524", "vila clementino"] },
+      apelidos: [], ruas: ["avenida professor ascendino reis", "professor ascendino reis", "ascendino reis", "ascendino"], numeros: ["2524"], bairros: ["vila clementino"], metros: ["estacao aacd servidor", "estacao aacd", "aacd servidor", "metro aacd", "linha 5 lilas", "linha 5", "linha lilas", "metro", "estacao"], faculdades: [], hospitais: ["aacd", "hospital aacd", "hospital"], pontos_turisticos: [],
+      palavras_chave: ["estacao aacd servidor", "estacao aacd", "aacd servidor", "metro aacd", "linha 5 lilas", "linha 5", "linha lilas", "metro", "estacao", "aacd", "hospital aacd", "hospital", "avenida professor ascendino reis", "professor ascendino reis", "ascendino reis", "ascendino", "2524", "vila clementino"] },
     { id: 42, nome: "Rua Borges Lagoa, 1395", nome_curto: "Borges Lagoa, 1395", distrito: "Vila Clementino", lat: -23.598100, lng: -46.648600, tipo: "Parada Convencional",
       apelidos: [], ruas: ["rua borges lagoa", "borges lagoa"], numeros: ["1395"], bairros: ["vila clementino"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
       palavras_chave: ["rua borges lagoa", "borges lagoa", "1395", "vila clementino"] },
     { id: 43, nome: "Rua Borges Lagoa, 895 — Hospital São Paulo / UNIFESP", nome_curto: "Hospital São Paulo", distrito: "Vila Clementino", lat: -23.597600, lng: -46.647100, tipo: "Polo Universitário e de Saúde",
-      apelidos: ["hospital sp"], ruas: ["rua borges lagoa", "borges lagoa"], numeros: ["895"], bairros: ["vila clementino"], metros: [], faculdades: ["unifesp", "universidade federal de sao paulo", "escola paulista de medicina"], hospitais: ["hospital sao paulo", "hospital universitario", "hospital"], pontos_turisticos: [],
-      palavras_chave: ["hospital sp", "unifesp", "universidade federal de sao paulo", "escola paulista de medicina", "hospital sao paulo", "hospital universitario", "hospital", "rua borges lagoa", "borges lagoa", "895", "vila clementino"] },
+      apelidos: ["hospital sp"], ruas: ["rua borges lagoa", "borges lagoa"], numeros: ["895"], bairros: ["vila clementino"], metros: [], faculdades: ["unifesp", "universidade federal de sao paulo", "escola paulista de medicina", "faculdade", "universidade"], hospitais: ["hospital sao paulo", "hospital universitario", "hospital"], pontos_turisticos: [],
+      palavras_chave: ["hospital sp", "unifesp", "universidade federal de sao paulo", "escola paulista de medicina", "faculdade", "universidade", "hospital sao paulo", "hospital universitario", "hospital", "rua borges lagoa", "borges lagoa", "895", "vila clementino"] },
     { id: 44, nome: "Rua Borges Lagoa, 565", nome_curto: "Borges Lagoa, 565", distrito: "Vila Clementino", lat: -23.598900, lng: -46.642500, tipo: "Parada Convencional",
       apelidos: [], ruas: ["rua borges lagoa", "borges lagoa"], numeros: ["565"], bairros: ["vila clementino"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
       palavras_chave: ["rua borges lagoa", "borges lagoa", "565", "vila clementino"] },
@@ -256,8 +259,8 @@ const LINHA_875C10 = {
       apelidos: [], ruas: ["rua machado bittencourt", "machado bittencourt"], numeros: [], bairros: ["vila mariana"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
       palavras_chave: ["rua machado bittencourt", "machado bittencourt", "vila mariana"] },
     { id: 46, nome: "Terminal Metrô Santa Cruz — Ponto Final", nome_curto: "Metrô Santa Cruz", distrito: "Vila Mariana", lat: -23.600100, lng: -46.636800, tipo: "Conexão Metrô (Linhas 1-Azul e 5-Lilás)",
-      apelidos: ["ponto final", "fim da linha", "final da linha", "ultima parada"], ruas: [], numeros: [], bairros: ["vila mariana"], metros: ["metro santa cruz", "estacao santa cruz", "santa cruz", "linha 1 azul", "linha azul", "linha 5 lilas", "linha lilas"], faculdades: [], hospitais: [], pontos_turisticos: ["terminal santa cruz"],
-      palavras_chave: ["ponto final", "fim da linha", "final da linha", "ultima parada", "metro santa cruz", "estacao santa cruz", "santa cruz", "linha 1 azul", "linha azul", "linha 5 lilas", "linha lilas", "terminal santa cruz", "vila mariana"] }
+      apelidos: ["ponto final", "fim da linha", "final da linha", "ultima parada"], ruas: [], numeros: [], bairros: ["vila mariana"], metros: ["metro santa cruz", "estacao santa cruz", "santa cruz", "linha 1 azul", "linha 1", "linha azul", "linha 5 lilas", "linha 5", "linha lilas", "metro", "estacao"], faculdades: [], hospitais: [], pontos_turisticos: ["terminal santa cruz", "terminal"],
+      palavras_chave: ["ponto final", "fim da linha", "final da linha", "ultima parada", "metro santa cruz", "estacao santa cruz", "santa cruz", "linha 1 azul", "linha 1", "linha azul", "linha 5 lilas", "linha 5", "linha lilas", "metro", "estacao", "terminal santa cruz", "terminal", "vila mariana"] }
   ]
 };
 
@@ -289,12 +292,12 @@ function _lev1(a, b) { /* distância de edição ≤ 1 */
 function _pontuar(parada, palavras, junto) {
   let total = 0; const acertos = [];
   for (const cat in _PESOS) {
-    let achou = false;
+    let melhor = 0;
     for (const kw of (parada[cat] || [])) {
       const k = _limpar(kw).join(" ");
-      if (k && (" " + junto + " ").indexOf(" " + k + " ") >= 0) { achou = true; break; }
+      if (k && (" " + junto + " ").indexOf(" " + k + " ") >= 0) melhor = Math.max(melhor, _PESOS[cat] + Math.min(15, 5 * (k.split(" ").length - 1))); /* frase mais específica vale um pouco mais */
     }
-    if (achou) { total += _PESOS[cat]; acertos.push(cat); }
+    if (melhor) { total += melhor; acertos.push(cat); }
   }
   if (total === 0) { /* correspondência parcial: uma palavra importante parecida */
     const kws = new Set(); (parada.palavras_chave || []).forEach(k => _limpar(k).forEach(w => { if (w.length >= 5 && !/^\d+$/.test(w)) kws.add(w); }));
@@ -384,6 +387,10 @@ if (typeof module !== "undefined") {
 
 </script>
 <script>
+/* Fonte da previsão dos ônibus (tempo real). Cole aqui o endereço do intermediário (veja previsao-worker.js). Vazio = sem previsão. */
+window.GUIA_CONFIG = window.GUIA_CONFIG || { previsaoUrl: 'https://guia-previsao.nicoleanny37.workers.dev' };
+</script>
+<script>
 'use strict';
 /* GuIa — interação 100% por voz. Sem botões, sem campos, sem links. A tela só espelha o que o Guia fala (aria-hidden: leitores de tela não duplicam a voz). */
 /* A ordem e os dados das 46 paradas vêm do arquivo mestre linha875c10.js */
@@ -407,6 +414,13 @@ const PERSON = '<svg class="pm" viewBox="0 0 24 24" aria-hidden="true"><circle c
 const LOGO = '<span class="logo" aria-label="GuIa">' + PERSON + '<span>gu<i>ia</i></span></span>';
 const ic = n => '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">' + IC[n] + '</svg>';
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+/* Cartão que diz de onde vem a posição: GPS real (com a parada mais próxima e a precisão) ou simulada. */
+function locHTML(n) {
+  if (!n) return '';
+  if (n.sim) return '<div class="loc">' + ic('pin') + '<span><b>Posição simulada</b><small>Não é o GPS. Diga “modo real” para usar o GPS.</small></span></div>';
+  const g = n.lastNearAll;
+  return '<div class="loc real">' + ic('pin') + '<span><b>Localização real (GPS)</b><small>' + (g ? 'A ' + fmtD(g.d) + ' da parada ' + esc(nm(g.s)) + (n.acc ? ' · precisão de ' + Math.round(n.acc) + ' m' : '') : 'Procurando o sinal de GPS…') + '</small></span></div>';
+}
 const eq = '<span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>';
 const PILL = { speaking: ['Falando em voz alta', 'vol'], listening: ['Ouvindo…', 'mic'], idle: ['Aguardando', 'mic'], blocked: ['Microfone bloqueado', 'alert'] };
 const pillHTML = () => '<span class="pill" data-pill>' + eq + '<span data-pill-txt>' + PILL[S.st || 'idle'][0] + '</span></span>';
@@ -417,8 +431,9 @@ function setState(s) {
 }
 function setCaption(t) { S.cap = t; document.querySelectorAll('[data-cap]').forEach(e => { e.textContent = t; e.classList.toggle('s', t.length > 70); }); }
 function setHeard(t) { S.heard = t; const e = document.querySelector('[data-heard]'); if (e) e.textContent = t ? '“' + t + '”' : '\u00a0'; }
-function setSimBanner() { if (S.view) show(S.view, S.vdata); }
+function setSimBanner() { if (S.view && !((S.view === 'route' || S.view === 'near') && !S.nav)) show(S.view, S.vdata); }
 function show(name, d) {
+  if ((name === 'route' || name === 'near') && !S.nav) name = 'say';
   const isEmg = name === 'emg1' || name === 'emg2';
   if (S.emg && S.emg.phase && !isEmg) { S.view = name; S.vdata = d || {}; return; }
   if (!isEmg) { S.view = name; S.vdata = d || {}; d = S.vdata; } else d = d || {};
@@ -479,7 +494,7 @@ function show(name, d) {
     h = simNote() + '<div class="head"><span class="bb">' + ic('bus') + '</span><h1>Faltam ' + l + (l === 1 ? ' parada' : ' paradas') + '</h1></div>' +
       '<p class="sub" style="color:var(--text)">Você está no ônibus 875C-10 · cerca de ' + mins + ' min</p><ol class="tl">' + items.join('') + '</ol>' +
       (S.ans ? '<div class="ans"><small class="lbl">Você perguntou</small><q>“' + esc(S.ans.q) + '”</q><small class="lbl">Resposta</small><p>' + esc(S.ans.a) + '</p></div>' : '') +
-      '<div class="grow"></div><div class="acts">' + micPill + '</div>' + snd;
+      locHTML(S.nav) + '<div class="grow"></div><div class="acts">' + micPill + '</div>' + snd;
   } else if (name === 'near') {
     const n = S.nav;
     h = '<span class="badge-top">' + ic('alert') + 'Atenção</span>' + simNote() + '<div class="grow"></div><div class="big-badge" aria-hidden="true">' + ic('bus') + '</div>' +
@@ -588,8 +603,71 @@ const NO = /\b(nao|negativo|jamais|nunca|cancelar|errado|incorreto|nem)\b/;
 const yn = n => NO.test(n) ? false : YES.test(n) ? true : undefined;
 const RE_SIM_OFF = /\b(desativar|desligar|sair d[ae]|encerrar|cancelar|fim d[ae]) (a )?(simulacao|modo teste)\b|\bmodo real\b/;
 const RE_SIM_ON = /\b(simulacao|simular|modo teste|modo de teste)\b/;
+
+/* ---------- previsão do ônibus: quando sai e quando passa na parada ---------- */
+const RE_PREV = /\b(previsao|previsoes|quando (o )?onibus (passa|sai|chega|vem|parte)|que horas (o )?onibus (passa|sai|chega|parte)|(o )?onibus (passa|sai|chega|vem) (quando|que horas)|quanto (tempo )?falta (para|pro) (o )?onibus|horario do onibus)\b/;
+const PREV_URL = () => ((window.GUIA_CONFIG && window.GUIA_CONFIG.previsaoUrl) || (prefs && prefs.previsaoUrl) || '').trim();
+/** Busca a previsão no serviço configurado. Nunca inventa: sem fonte, sem internet ou com falha, devolve o motivo. */
+async function buscarPrevisao(stop) {
+  const url = PREV_URL(); if (!url) return { erro: 'sem_fonte' };
+  if (navigator.onLine === false) return { erro: 'offline' };
+  try {
+    const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 7000);
+    const r = await fetch(url + (url.indexOf('?') < 0 ? '?' : '&') + 'linha=875C-10&parada=' + stop.id + '&lat=' + stop.lat + '&lng=' + stop.lng, { signal: ctl.signal });
+    clearTimeout(to); if (!r.ok) return { erro: 'falha' };
+    return { dados: await r.json() };
+  } catch (e) { return { erro: navigator.onLine === false ? 'offline' : 'falha' }; }
+}
+const minFala = (m, est) => m <= 0 ? 'agora' : m === 1 ? (est ? 'em cerca de 1 minuto' : 'em 1 minuto') : (est ? 'em cerca de ' : 'em ') + m + ' minutos';
+/** Previsão calculada pela posição dos ônibus (a SPTrans só cadastra paradas de corredor, então não há previsão pronta por parada). */
+function previsaoEstimada(stop, d) {
+  const ps = d.passagens || [];
+  if (stop.id === 1) return d.noTerminal > 0 ? 'Há ' + pl(d.noTerminal, 'ônibus', 'ônibus') + ' da 875C-10 no Terminal Lapa agora. A SPTrans não informa o horário exato de saída.' : 'Não há ônibus da 875C-10 no Terminal Lapa agora.';
+  if (!d.veiculos) return 'Não encontrei nenhum ônibus da 875C-10 circulando agora.';
+  if (!ps.length) return 'Há ' + pl(d.veiculos, 'ônibus', 'ônibus') + ' da 875C-10 circulando, mas nenhum está vindo para ' + nm(stop) + ' agora.';
+  const f = x => x.minutos === 0 ? 'está chegando agora' : 'está a ' + pl(x.paradasAte, 'parada', 'paradas') + ', daqui a cerca de ' + x.minutos + (x.minutos === 1 ? ' minuto' : ' minutos');
+  const p = ['O ônibus 875C-10 mais próximo de ' + nm(stop) + ' ' + f(ps[0]) + '.'];
+  if (ps[1]) p.push('O seguinte ' + f(ps[1]) + '.');
+  p.push('É uma estimativa pela posição dos ônibus.');
+  return p.join(' ');
+}
+async function previsaoTexto(stop) {
+  const r = await buscarPrevisao(stop);
+  if (r.erro === 'sem_fonte') return 'Ainda não estou ligado ao serviço de previsão dos ônibus, então não consigo dizer quando o ônibus sai ou passa em ' + nm(stop) + '.';
+  if (r.erro === 'offline') return 'Sem internet, não consigo ver a previsão do ônibus agora.';
+  if (r.erro) return 'Não consegui buscar a previsão agora. Tente de novo em instantes.';
+  if ((r.dados || {}).estimado) return previsaoEstimada(stop, r.dados);
+  const d = r.dados || {}, p = [];
+  if (d.saida && (d.saida.hora || d.saida.minutos != null)) p.push('O próximo ônibus 875C-10 sai do ' + (d.saida.parada || nm(stop)) + (d.saida.hora ? ' às ' + d.saida.hora : '') + (d.saida.minutos != null ? ', ' + minFala(d.saida.minutos, d.saida.estimado) : '') + '.');
+  const ps = (d.passagens || []).filter(x => x && (x.minutos != null || x.hora));
+  if (ps.length && !d.saida) { /* na saída do terminal, a frase de "sai" já diz tudo */
+    const f = x => (x.minutos != null ? minFala(x.minutos, x.estimado) : '') + (x.hora ? (x.minutos != null ? ', ' : '') + 'às ' + x.hora : '');
+    p.push('Na parada ' + nm(stop) + ', o próximo ônibus passa ' + f(ps[0]) + '.'); if (ps[1]) p.push('O seguinte passa ' + f(ps[1]) + '.');
+  }
+  if (!p.length) return d.fonte === 'posicao' ? 'Não há ônibus da linha 875C-10 se aproximando de ' + nm(stop) + ' agora.' : 'Não há previsão de ônibus para ' + nm(stop) + ' agora.';
+  if ((d.passagens || []).some(x => x && x.estimado) || (d.saida && d.saida.estimado)) p.push('É uma estimativa pela posição do ônibus.');
+  if (d.atualizadoEm) p.push('Informação das ' + d.atualizadoEm + '.');
+  return p.join(' ');
+}
+/** Já dentro do ônibus: a previsão útil é o tempo até o destino (estimativa pela média da linha). */
+function previsaoNoOnibus(n) {
+  const l = n.dest.id - STOPS[n.idx].id, mins = Math.max(1, Math.round(l * 1.83));
+  return 'Você já está no ônibus. Faltam ' + pl(l, 'parada', 'paradas') + ' até ' + nm(n.dest) + ', cerca de ' + mins + ' minutos. É uma estimativa pela média da linha.';
+}
+/** Pergunta de previsão fora de uma viagem: usa a parada mais próxima pelo GPS (ou a que foi falada na simulação). */
+async function previsaoGlobal() {
+  let stop = S.lastSimStop || null, pre = '';
+  if (!S.sim || !stop) {
+    stop = null;
+    try { const pos = S.geoOK ? await getPos(8000) : null; if (pos) { const nr = nearest(pos, 0, STOPS.length - 1); stop = nr.s; if (nr.d > 150) pre = 'A parada mais próxima é ' + nm(nr.s) + ', a ' + fmtD(nr.d) + ' de você. '; } } catch (e) {}
+  }
+  if (!stop) { await speak('Para a previsão, preciso saber em que parada você está. Ligue a localização, ou diga a parada.'); return; }
+  await speak(pre + await previsaoTexto(stop));
+}
+
 /** Comandos globais, válidos em qualquer pergunta. Devolve true se tratou. */
 async function globalCmd(n) {
+  if (RE_PREV.test(n)) { await previsaoGlobal(); return true; }
   if (RE_SIM_OFF.test(n)) { if (S.sim || true) { S.sim = false; S.modeChosen = true; setSimBanner(); sound('ok'); await speak('Modo simulação desativado. Usando localização real.'); return true; } }
   if (RE_SIM_ON.test(n) && !/\b(nao|sem)\b/.test(n)) { S.sim = true; S.modeChosen = true; setSimBanner(); sound('ok'); await speak('Modo simulação ativado.'); return true; }
   return false;
@@ -717,7 +795,10 @@ async function askStop(prompt, label, view) {
     }
     if (r.tipo === 'ambigua') {
       const lista = r.paradas;
-      return await ask('Encontrei várias paradas. Você quer a parada ' + listaFalada(lista) + '?', (n, raw) => escolherEntre(raw || n, lista) || undefined, { again: 'Diga o nome, o número do endereço ou o número da parada.', noGlobal: true });
+      const pergunta = lista.length <= 6
+        ? 'Encontrei várias paradas. Você quer a parada ' + listaFalada(lista) + '?'
+        : 'Encontrei ' + lista.length + ' paradas. Elas vão de ' + nm(lista[0]) + ' até ' + nm(lista[lista.length - 1]) + '. Diga o nome da rua, o número do endereço ou um ponto de referência.'; /* lista longa: resume, para não cansar quem está ouvindo */
+      return await ask(pergunta, (n, raw) => escolherEntre(raw || n, lista) || undefined, { again: 'Diga o nome, o número do endereço ou o número da parada.', noGlobal: true });
     }
     r = await ask(label, parse, { again: label, view: view || 'listen' });
   }
@@ -745,13 +826,18 @@ async function planTrip(first) {
         if (nr.d > 100) { /* não está no ponto (mais de 100 m): pergunta se segue no funcionamento normal ou na simulação */
           const far = nr.d > 2500;
           const choice = await ask((far ? 'Você está a ' + fmtD(nr.d) + ' da linha 875C-10.' : 'Você não está no ponto. A parada mais próxima é ' + nm(nr.s) + ', a ' + fmtD(nr.d) + '.') + ' Quer seguir no funcionamento normal ou usar a simulação? Diga normal ou simulação.',
-            n => /\b(simula\w*|teste)\b/.test(n) ? 'sim' : /\b(normal|real|gps|seguir|funcionamento)\b/.test(n) ? 'normal' : undefined, { noGlobal: true, again: 'Diga normal ou simulação.' });
-          if (choice === 'sim') { S.sim = true; S.modeChosen = true; setSimBanner(); await speak('Modo simulação ativado.'); origin = await askOrigin(); }
+            n => /\b(simula\w*|teste)\b/.test(n) ? 'sim' : /\b(normal|real|gps|seguir|funcionamento)\b/.test(n) ? 'normal' : (RE_ESTOU.test(n) && (paradaFalada(n, pos).stop)) ? { fala: n } : undefined, { noGlobal: true, again: 'Diga normal ou simulação, ou diga em que parada você está.' });
+          if (choice && choice.fala) { /* você disse onde está: confere com o GPS */
+            const sp = paradaFalada(choice.fala, pos).stop, dd = dist(pos, sp);
+            if (dd <= CONFERE_M && sp.id < dest.id) { origin = sp; origin.dist = dd; await speak('Entendi. Você está na parada ' + nm(sp) + '. O GPS confirma, a ' + fmtD(dd) + '.'); }
+            else { await speak(sp.id >= dest.id ? 'A parada ' + nm(sp) + ' fica depois do seu destino. Vou seguir pelo GPS.' : 'Você disse ' + nm(sp) + ', mas o GPS indica que você está a ' + fmtD(dd) + ' dela. Vou seguir pelo GPS.'); origin = nr.s; origin.dist = nr.d; walk = true; }
+          } else if (choice === 'sim') { S.sim = true; S.modeChosen = true; setSimBanner(); await speak('Modo simulação ativado.'); origin = await askOrigin(); }
           else if (far) { await speak('Você está longe demais da linha para eu acompanhar pelo GPS. Quando estiver perto de uma parada, é só pedir de novo.'); continue; }
           else { origin = nr.s; origin.dist = nr.d; walk = true; }
         } else { origin = nr.s; origin.dist = nr.d; }
       }
     }
+    if (S.sim) S.lastSimStop = origin;
     if (dest.id <= origin.id) { await speak('Essa parada fica para trás. A linha 875C-10 só vai do Terminal Lapa ao Metrô Santa Cruz. Vamos escolher o destino de novo.'); continue; }
     const mins = Math.max(1, Math.round((dest.id - origin.id) * 1.83));
     S.vdata = { dest: nm(dest), from: nm(origin), mins };
@@ -780,6 +866,7 @@ async function walkToStop(stop) {
     for (const a of alts) { const m = norm(a);
       if (/\b(sair|cancelar|encerrar|desistir)\b/.test(m)) { w.phase = 'done'; clearTrip(); await speak('Caminhada cancelada.'); w.done('cancel'); return; }
       if (RE_SIM_ON.test(m)) { S.sim = true; S.modeChosen = true; setSimBanner(); w.phase = 'done'; clearTrip(); await speak('Modo simulação ativado.'); w.done('cancel'); return; }
+      if (RE_PREV.test(m)) { await speak(await previsaoTexto(stop)); return; }
       if (/\b(repetir|repete|onde estou|ajuda)\b/.test(m)) { await speak(w.last || 'Ainda estou calculando onde você está.'); return; }
     } sound('err'); } finally { busy = false; } };
   const say = txt => { w.last = txt; return speak(txt); };
@@ -825,6 +912,50 @@ async function offerResume(greet, s) {
   return yes;
 }
 
+
+/* ---------- posição = o que você fala + o GPS (um completa o outro) ---------- */
+const RE_ESTOU = /\b(estou|estamos|me encontro|to (na|no|em|aqui|perto)|tou (na|no|em|aqui|perto))\b/;
+const CONFERE_M = 300; /* até 300 m de diferença entre a fala e o GPS: considera que confere */
+/** Entende a parada falada. Se a fala serve para várias (ex.: "Faria Lima"), o GPS escolhe a mais perto de você. */
+function paradaFalada(texto, pos) {
+  const r = reconhecerParada(texto);
+  if (r.tipo === 'direta' || r.tipo === 'confirmar') return { stop: r.parada };
+  if (r.tipo === 'ambigua') {
+    if (pos) { let b = null; r.paradas.forEach(s => { const d = dist(pos, s); if (!b || d < b.d) b = { s, d }; }); return { stop: b.s, porGps: true }; }
+    return { ambigua: r.paradas };
+  }
+  return {};
+}
+/** Aplica a parada informada à viagem em andamento. No GPS real só avança; na simulação (livre) a sua fala manda e pode avançar ou voltar. */
+async function aplicarParada(n, s, intro, livre) {
+  if (s.id > n.dest.id) { await speak('Essa parada fica depois do seu destino, ' + nm(n.dest) + '.'); return; }
+  if (livre && s.id < n.origin.id) { await speak('Essa parada fica antes do seu ponto de embarque, ' + nm(n.origin) + '.'); return; }
+  if (!livre && s.id - 1 < n.idx) { await speak('Você já passou pela parada ' + nm(s) + '. A última registrada foi ' + nm(STOPS[n.idx]) + '.'); return; }
+  if (s.id === n.dest.id) { clearTimeout(n.timer); n.idx = n.dest.id - 2; await speak(intro); await step(n, false); return; }
+  if (livre ? s.id - 1 !== n.idx : s.id - 1 > n.idx) { n.idx = s.id - 1; n.tok++; saveTrip({ origin: n.origin.id, dest: n.dest.id, idx: n.idx, sim: n.sim }); S.ans = null; drawTrip(); }
+  clearTimeout(n.timer); if (n.sim && !n.paused && n.phase !== 'done') schedule(n);
+  const l = n.dest.id - STOPS[n.idx].id;
+  await speak(intro + ' Faltam ' + pl(l, 'parada', 'paradas') + ' até ' + nm(n.dest) + '.');
+}
+/** "Estou na Rua Roma": junta o que você disse com o GPS. */
+async function posicaoFalada(n, m) {
+  let f = paradaFalada(m, n.sim ? null : n.lastPos);
+  if (f.ambigua) { const lista = f.ambigua.slice(0, 5); const s = await ask('Em qual parada você está? ' + listaFalada(lista) + '?', (x, raw) => escolherEntre(raw || x, lista) || undefined, { noGlobal: true, view: 'keep', again: 'Diga o nome ou o número da parada.' }); f = { stop: s }; }
+  if (!f.stop) { await speak('Não entendi em que parada você está.'); return true; }
+  const s = f.stop;
+  if (n.sim) { await aplicarParada(n, s, 'Entendi. Você está na parada ' + nm(s) + '.', true); return true; } /* simulação: acredita no que você fala, para frente ou para trás */
+  if (s.id > n.dest.id || s.id - 1 < n.idx) { await aplicarParada(n, s, ''); return true; } /* já passou ou fica depois do destino: nem precisa perguntar */
+  if (!n.lastPos) { await aplicarParada(n, s, 'Ainda sem sinal de GPS, então vou usar o que você falou. Você está na parada ' + nm(s) + '.'); return true; }
+  const d = dist(n.lastPos, s);
+  if (d <= CONFERE_M) { await aplicarParada(n, s, 'Entendi. Você está na parada ' + nm(s) + (f.porGps ? ', a mais próxima de você pelo GPS' : '. O GPS confirma, a ' + fmtD(d)) + '.'); return true; }
+  const g = n.lastNearAll;
+  const quem = await ask('Você disse ' + nm(s) + ', mas o GPS indica que você está a ' + fmtD(g.d) + ' da parada ' + nm(g.s) + ' e a ' + fmtD(d) + ' da que você falou. Em qual devo confiar? Diga eu falei, ou GPS.',
+    x => /\b(gps|localizacao|sistema)\b/.test(x) ? 'gps' : /\b(eu falei|falei|eu disse|disse|o que falei|minha fala)\b/.test(x) ? 'fala' : undefined, { noGlobal: true, view: 'keep', again: 'Diga eu falei, ou GPS.' });
+  if (quem === 'fala') await aplicarParada(n, s, 'Certo. Vou usar a parada que você falou, ' + nm(s) + '.');
+  else await speak('Certo. Continuo pelo GPS.');
+  return true;
+}
+
 /* ---------- viagem: simulação e GPS real, comandos por voz ---------- */
 const NAV_MS = 5000;
 function drawTrip() { if (S.nav) setTrip(); }
@@ -837,7 +968,7 @@ async function arrive(n) {
   clearTrip();
   const my = n.tok = (n.tok || 0) + 1; clearTimeout(n.timer); n.phase = 'done'; sound('arrive'); notify('GuIa', 'Você chegou: ' + nm(n.dest));
   show('arrive', { dest: nm(n.dest), sim: n.sim });
-  await speak('Você chegou ao seu destino: ' + nm(n.dest) + '.' + (n.dest.id === 46 ? ' Fim da linha.' : '') + (n.sim ? ' Fim da simulação.' : '')); n.done('arrived');
+  await speak('Você chegou ao seu destino: ' + nm(n.dest) + '.' + (n.dest.id === 46 ? ' Fim da linha.' : '') + (n.sim ? ' Fim da simulação. Voltando ao modo real.' : '')); n.done('arrived');
 }
 async function step(n, manual) {
   if (n.phase === 'done') return;
@@ -853,20 +984,30 @@ function schedule(n) { clearTimeout(n.timer); const my = n.tok; n.timer = setTim
 async function watchTick(n, c) {
   if (n.paused || n.phase === 'done') return;
   const pos = { lat: c.latitude, lng: c.longitude }, nr = nearest(pos, n.idx, n.dest.id - 1);
-  n.lastPos = pos; n.lastNear = nr;
+  n.lastPos = pos; n.lastNear = nr; n.acc = c.accuracy || 0; n.lastNearAll = nearest(pos, 0, STOPS.length - 1);
+  if (!n.tDraw || Date.now() - n.tDraw > 2500) { n.tDraw = Date.now(); if (S.view === 'route' && !(S.emg && S.emg.phase)) show('route'); }
   if (nr.i > n.idx && nr.d <= Math.max(90, (c.accuracy || 0) * 1.2)) { n.idx = nr.i - 1; await step(n, false); }
   else if (!n.nearSaid && n.dest.id - 1 > n.idx && dist(pos, n.dest) <= 150) { n.nearSaid = true; sound('near'); await speak('Você está chegando em ' + nm(n.dest) + '. Prepare-se para desembarcar.'); }
   if (dist(pos, n.dest) <= 50 && n.phase !== 'done') { n.idx = n.dest.id - 2; await step(n, false); }
 }
+/** Onde estou: no modo real vem do GPS (nunca do que foi falado); na simulação diz que a posição é simulada. */
+function whereReal(n) {
+  if (n.sim) return where(n);
+  if (!n.lastPos) return 'Ainda não recebi o sinal de GPS. Assim que receber, eu aviso a sua posição.';
+  const g = n.lastNearAll, s = STOPS[n.idx], l = n.dest.id - s.id;
+  return 'Pelo GPS, você está a ' + fmtD(g.d) + ' da parada ' + nm(g.s) + (n.acc ? ', com precisão de cerca de ' + Math.round(n.acc) + ' metros' : '') + '. A última parada registrada foi ' + nm(s) + '. Faltam ' + pl(l, 'parada', 'paradas') + ' até ' + nm(n.dest) + '.';
+}
 function where(n) { const s = STOPS[n.idx], l = n.dest.id - s.id; return 'Você está na parada ' + s.id + ', ' + nm(s) + '. Faltam ' + pl(l, 'parada', 'paradas') + ' até ' + nm(n.dest) + '.' + (n.sim ? ' Atenção: você está no modo simulação.' : ''); }
-const HELP = 'Você pode dizer: avançar, para pular uma parada na simulação. Parar, para pausar. Continuar. Onde estou. Próxima parada. Repetir. Para onde vou. Modo real, ou ativar simulação. Ou sair, para encerrar a viagem.';
+const HELP = 'Você pode dizer: estou na, e o nome da rua, para eu confirmar com o GPS. Previsão, para saber quando o ônibus passa. Avançar, para pular uma parada na simulação. Parar, para pausar. Continuar. Onde estou. Próxima parada. Repetir. Para onde vou. Modo real, ou ativar simulação. Ou sair, para encerrar a viagem.';
 async function reply(n, text) { S.ans = { q: n.asked || '', a: text }; if (S.view === 'route' || S.view === 'near') show(S.view); await speak(text); }
 async function navCmd(n, c) {
   const m = c;
   if (/\b(sair|encerrar|cancelar viagem|cancelar rota|terminar)\b/.test(m) && !RE_SIM_OFF.test(m)) { clearTimeout(n.timer); n.phase = 'done'; n.tok++; clearTrip(); await speak('Viagem encerrada.'); n.done('cancel'); return true; }
   if (RE_SIM_OFF.test(m)) { clearTimeout(n.timer); n.phase = 'done'; n.tok++; clearTrip(); S.sim = false; S.modeChosen = true; setSimBanner(); await speak('Modo simulação desativado. Usando localização real.'); n.done('cancel'); return true; }
+  if (RE_PREV.test(m)) { await reply(n, previsaoNoOnibus(n)); return true; }
   if (/\bajuda\b/.test(m)) { await reply(n, HELP); return true; }
-  if (/\b(onde estou|onde eu estou)\b/.test(m)) { await reply(n, where(n)); if (!n.sim && n.lastNear) await speak('O GPS indica a parada mais próxima a ' + fmtD(n.lastNear.d) + '.'); return true; }
+  if (/\b(onde estou|onde eu estou)\b/.test(m)) { await reply(n, whereReal(n)); return true; }
+  if (RE_ESTOU.test(m)) { const f0 = paradaFalada(m, n.sim ? null : n.lastPos); if (f0.stop || f0.ambigua) return await posicaoFalada(n, m); }
   if (/\b(para onde vou|destino)\b/.test(m)) { await reply(n, 'Seu destino é ' + nm(n.dest) + ', parada ' + n.dest.id + '. Faltam ' + pl(n.dest.id - STOPS[n.idx].id, 'parada', 'paradas') + '.'); return true; }
   if (/\bproxima parada\b|\bproximo ponto\b/.test(m)) { const nx = STOPS[Math.min(n.idx + 1, 45)], d = dist(n.lastPos || STOPS[n.idx], nx); await reply(n, 'Próxima parada: ' + nm(nx) + '. Distância aproximada: ' + fmtD(d) + '.'); return true; }
   if (/\b(repetir|repete|ouvir de novo)\b/.test(m)) { await reply(n, S.lastNavMsg || where(n)); return true; }
@@ -902,6 +1043,7 @@ async function runTrip(t) {
 /* ---------- ciclo principal ---------- */
 async function mainLoop(first, saved, greet) {
   for (;;) {
+   try {
     let trip;
     if (saved) {
       const s = saved; saved = null;
@@ -917,10 +1059,15 @@ async function mainLoop(first, saved, greet) {
       saveTrip({ origin: trip.origin.id, dest: trip.dest.id, idx: trip.origin.id - 1, sim: false, phase: 'walk' });
       const r = await walkToStop(trip.origin); if (r !== 'arrived') { clearTrip(); first = 'Para onde você gostaria de ir?'; continue; }
     }
-    await runTrip(trip); /* a tela de chegada fica visível durante a pergunta */
+    const fim = await runTrip(trip); /* a tela de chegada fica visível durante a pergunta */
+    if (S.sim) { S.sim = false; S.modeChosen = false; setSimBanner(); if (fim === 'cancel') await speak('Voltando ao modo real.'); } /* a simulação não fica ligada nas próximas viagens: o padrão é o GPS real */
     const again = await ask('Quer fazer uma nova viagem? Diga novo destino, ou encerrar guia.', n => /\b(encerrar|encerra|nao|sair|fim)\b/.test(n) ? false : /\b(novo|nova|outro|outra|sim|quero|destino)\b/.test(n) ? true : undefined, { view: 'keep' });
     if (!again) await ask('Tudo bem. Estou ouvindo. Diga Para onde vou, quando quiser ir a algum lugar.', n => /\b(para onde|destino|viagem|ir|quero|guia|comecar)\b/.test(n) ? true : undefined, { wait: 45000 });
     first = 'Para onde você gostaria de ir?';
+   } catch (e) { /* qualquer falha inesperada: o Guia avisa por voz e recomeça, em vez de ficar mudo */
+    console.error(e); S.nav = null; S.walk = null; mainHandler = null; waiter = null; first = 'Para onde você gostaria de ir?';
+    try { await speak('Tive um problema, mas já estou de volta.'); } catch (e2) {}
+   }
   }
 }
 /* Saudação pelo horário: 05–12 bom dia, 12–18 boa tarde, 18–05 boa noite. */
