@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#160a22">
+<title>GuIa — guia por voz, linha 875C-10</title>
+<meta name="color-scheme" content="light dark">
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--plum:#160a22;--plum2:#2a1740;--yellow:#f2cf6b;--mint:#33deb4;--navy:#0a1a40;--font:'Lexend','Montserrat',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
+  --stage:#f3f3f3;--bezel:#0b0d14;
+  --bg:#fff;--surface:#f3f1f6;--text:var(--plum);--muted:#4b3d5c;--btn-bg:var(--plum);--btn-fg:#fff;--line:#cfc6da;--ok:#0b6b57;--accent:var(--plum)}
+@media (prefers-color-scheme:dark){:root{--stage:#0b0d14;--bg:var(--plum);--surface:var(--plum2);--text:#fff;--muted:#d9cdea;--btn-bg:var(--yellow);--btn-fg:var(--navy);--line:#4a3566;--ok:var(--mint);--accent:var(--yellow)}}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--stage);color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased;user-select:none;-webkit-user-select:none;cursor:default;font-size:17px;line-height:1.4}
+.stage{min-height:100dvh;display:flex;align-items:center;justify-content:center}
+.phone{width:100%;height:100dvh;background:var(--bg);color:var(--text);display:flex;flex-direction:column;overflow:hidden;position:relative;transition:background .25s}
+@media (min-width:560px){.stage{padding:24px}.phone{width:414px;height:min(868px,calc(100dvh - 48px));min-height:640px;border-radius:56px;border:12px solid var(--bezel);box-shadow:0 8px 24px rgba(29,3,40,.18)}}
+.phone.tone-yellow{--bg:var(--yellow);--text:var(--navy);--muted:#1e2a4a;--btn-bg:var(--navy);--btn-fg:#fff;--surface:rgba(10,26,64,.1);--line:rgba(10,26,64,.35);--accent:var(--navy)}
+.phone.tone-mint{--bg:var(--mint);--text:var(--navy);--muted:#12294f;--btn-bg:var(--navy);--btn-fg:#fff;--surface:rgba(10,26,64,.1);--line:rgba(10,26,64,.35);--accent:var(--navy);--ok:var(--navy)}
+.view{flex:1;display:flex;flex-direction:column;gap:16px;padding:calc(20px + env(safe-area-inset-top,0px)) 24px calc(22px + env(safe-area-inset-bottom,0px));overflow-y:auto;min-height:0}
+.grow{flex:1;min-height:4px}
+.ic{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.sim{margin:0;padding:8px 14px;border:2px dashed var(--accent);border-radius:16px;font-weight:600;font-size:14px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:34px}
+.gl{font-weight:500;font-size:16px}
+.pill{display:inline-flex;align-items:center;gap:8px;background:var(--surface);border-radius:999px;padding:8px 16px;font-weight:600;font-size:15px}
+.pill .ic{font-size:18px}
+.eq{display:inline-flex;gap:3px;align-items:center;height:16px}
+.eq i{width:3px;background:currentColor;border-radius:2px;height:6px}
+body[data-s=speaking] .eq i,body[data-s=listening] .eq i{animation:eq .9s ease-in-out infinite}
+.eq i:nth-child(2){animation-delay:.15s!important}.eq i:nth-child(3){animation-delay:.3s!important}.eq i:nth-child(4){animation-delay:.45s!important}
+@keyframes eq{50%{height:16px}}
+.h1{margin:0;font-weight:800;font-size:clamp(28px,8vw,36px);line-height:1.1;letter-spacing:-.015em;word-break:break-word}
+.h1.s{font-size:clamp(22px,6vw,26px);line-height:1.2;font-weight:700}
+.h1.big{font-size:clamp(32px,9vw,40px)}
+.c{text-align:center}
+.sub{margin:0;color:var(--muted);font-size:18px}
+.strong{color:var(--text);font-weight:600;font-size:20px}
+.lbl{margin:0;font-weight:600;font-size:16px;color:var(--muted)}
+.quote{margin:0;font-weight:800;font-size:clamp(24px,7vw,30px);min-height:40px;text-align:center;word-break:break-word}
+.mic{position:relative;width:min(46vw,190px);aspect-ratio:1;border-radius:50%;background:var(--btn-bg);color:var(--btn-fg);display:grid;place-items:center;margin:8px auto;flex:none}
+.mic .ic{font-size:64px}
+.mic::before,.mic::after{content:"";position:absolute;inset:-16px;border-radius:50%;border:3px solid var(--line);opacity:.9}
+.mic::after{inset:-30px;opacity:.5}
+body[data-s=listening] .mic::before{animation:ring 1.6s ease-out infinite}
+body[data-s=listening] .mic::after{animation:ring 1.6s ease-out .8s infinite}
+@keyframes ring{0%{transform:scale(.92);opacity:.9}100%{transform:scale(1.2);opacity:0}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+.infocard{display:flex;gap:12px;align-items:center;border:2px solid var(--line);border-radius:16px;padding:14px 16px;font-weight:600;font-size:16px}
+.infocard .ic{font-size:26px}
+.cards{display:flex;flex-direction:column;gap:12px}
+.card{display:flex;gap:14px;align-items:center;background:var(--surface);border-radius:20px;padding:16px}
+.card .badge{width:48px;height:48px;border-radius:50%;background:var(--btn-bg);color:var(--btn-fg);display:grid;place-items:center;font-size:24px;flex:none}
+.card b{display:block;font-size:19px}.card span{font-size:15px;color:var(--muted)}
+.card em{margin-left:auto;font-style:normal;font-weight:700;font-size:14px;color:var(--ok);white-space:nowrap;display:flex;gap:4px;align-items:center}
+.row{display:flex;gap:12px;align-items:center;font-weight:500;font-size:17px}.row .ic{font-size:22px}
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;min-height:56px;border-radius:999px;font-weight:700;font-size:20px;background:var(--btn-bg);color:var(--btn-fg);padding:0 24px;pointer-events:none}
+.btn.o{background:transparent;color:var(--text);border:2px solid var(--text);font-size:18px}
+.btn .ic{font-size:24px}
+.acts{display:flex;flex-direction:column;gap:10px}
+.fine{margin:0;text-align:center;font-size:14px;color:var(--ok);font-weight:600;display:flex;gap:8px;justify-content:center;align-items:center}
+.tip{border:2px solid var(--line);border-radius:16px;padding:12px 14px;font-size:15px}.tip b{display:block}
+.badge-top{display:inline-flex;align-items:center;gap:8px;align-self:flex-start;background:var(--btn-bg);color:var(--yellow);border-radius:999px;padding:8px 16px;font-weight:700;font-size:15px}
+.head{display:flex;gap:14px;align-items:center}
+.head .bb{width:48px;height:48px;border-radius:14px;background:var(--btn-bg);color:var(--btn-fg);display:grid;place-items:center;font-size:26px;flex:none}
+.head h1{margin:0;font-weight:800;font-size:clamp(26px,7.4vw,32px);line-height:1.05}
+.tl{list-style:none;margin:6px 0 0;padding:0}
+.tl li{position:relative;display:flex;gap:14px;align-items:center;padding:0 0 22px;min-height:46px}
+.tl li:last-child{padding-bottom:0}
+.tl li::before{content:"";position:absolute;left:15px;top:32px;bottom:-4px;border-left:3px dotted var(--line)}
+.tl li.done::before{border-left:3px solid var(--ok)}
+.tl li:last-child::before{display:none}
+.node{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;flex:none;background:var(--bg);border:3px solid var(--line);position:relative;z-index:1}
+.node.ok{background:var(--ok);border-color:var(--ok);color:var(--bg)}
+.node.here{border-color:var(--text)}.node.here::after{content:"";width:12px;height:12px;border-radius:50%;background:var(--text)}
+.node.pin{background:var(--btn-bg);border-color:var(--btn-bg);color:var(--btn-fg);border-radius:10px}
+.node .ic{font-size:18px}
+.tl b{display:block;font-size:17px;font-weight:700;line-height:1.25}.tl small{display:block;font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.02em}
+.ans{background:var(--surface);border-radius:18px;padding:14px 16px}.ans q{display:block;font-weight:700;font-size:18px;margin:2px 0 10px;quotes:none}.ans p{margin:0;font-weight:800;font-size:22px;line-height:1.25}
+.big-badge{width:min(40vw,150px);aspect-ratio:1;border-radius:50%;background:var(--btn-bg);color:var(--mint);display:grid;place-items:center;margin:8px auto;position:relative;flex:none}
+.big-badge .ic{font-size:72px;stroke-width:2.6}
+.tone-yellow .big-badge{color:var(--yellow)}
+.big-badge::before,.big-badge::after{content:"";position:absolute;inset:-18px;border-radius:50%;border:3px solid var(--line)}
+.tone-yellow .big-badge::after{inset:-34px;opacity:.5}.tone-mint .big-badge::before,.tone-mint .big-badge::after{display:none}
+.tone-yellow .big-badge{animation:beat 1.2s ease-in-out infinite}
+@keyframes beat{50%{transform:scale(1.04)}}
+</style>
+</head>
+<body>
+<div class="stage"><div class="phone" id="phone"><div class="view" id="view" aria-hidden="true"></div></div></div>
+<script>
+'use strict';
+/* GuIa — interação 100% por voz. Sem botões, sem campos, sem links. A tela só espelha o que o Guia fala (aria-hidden: leitores de tela não duplicam a voz). */
+const STOPS = [{"id":1,"distrito":"Lapa","nome":"Terminal Lapa — Plataforma Interna Linha 875C-10","lat":-23.5186,"lng":-46.6974,"tipo":"Terminal de Origem"},{"id":2,"distrito":"Lapa","nome":"Rua Roma, 636","lat":-23.5221,"lng":-46.6961,"tipo":"Parada Convencional"},{"id":3,"distrito":"Lapa","nome":"Rua Nossa Senhora da Lapa, 49","lat":-23.5235,"lng":-46.6978,"tipo":"Parada Convencional"},{"id":4,"distrito":"Lapa","nome":"Rua Pio XI, 80","lat":-23.5252,"lng":-46.7011,"tipo":"Parada Convencional"},{"id":5,"distrito":"Alto da Lapa","nome":"Rua Pio XI, 698","lat":-23.5298,"lng":-46.7058,"tipo":"Parada Convencional"},{"id":6,"distrito":"Alto da Lapa","nome":"Praça Oswaldo Zanini","lat":-23.5332,"lng":-46.7089,"tipo":"Parada Convencional"},{"id":7,"distrito":"Alto da Lapa","nome":"Rua Doutor José Elias, 227","lat":-23.5358,"lng":-46.7114,"tipo":"Parada Convencional"},{"id":8,"distrito":"Alto da Lapa","nome":"Rua Doutor José Elias, 302","lat":-23.5372,"lng":-46.7126,"tipo":"Parada Convencional"},{"id":9,"distrito":"Alto da Lapa","nome":"Rua Barbalha, 355","lat":-23.5395,"lng":-46.7142,"tipo":"Parada Convencional"},{"id":10,"distrito":"Alto da Lapa","nome":"Rua Barbalha, 95","lat":-23.5413,"lng":-46.7153,"tipo":"Parada Convencional"},{"id":11,"distrito":"Alto de Pinheiros","nome":"Avenida Diógenes Ribeiro de Lima, 2345","lat":-23.5435,"lng":-46.7161,"tipo":"Parada Convencional"},{"id":12,"distrito":"Alto de Pinheiros","nome":"Avenida Diógenes Ribeiro de Lima, 2200","lat":-23.5458,"lng":-46.7148,"tipo":"Parada Convencional"},{"id":13,"distrito":"Alto de Pinheiros","nome":"Avenida Diógenes Ribeiro de Lima, 1900","lat":-23.5482,"lng":-46.7132,"tipo":"Parada Convencional"},{"id":14,"distrito":"Alto de Pinheiros","nome":"Avenida Diógenes Ribeiro de Lima, 1768","lat":-23.5501,"lng":-46.7115,"tipo":"Parada Convencional"},{"id":15,"distrito":"Alto de Pinheiros","nome":"Avenida Diógenes Ribeiro de Lima, 1321","lat":-23.5534,"lng":-46.7083,"tipo":"Parada Convencional"},{"id":16,"distrito":"Alto de Pinheiros","nome":"Avenida Diógenes Ribeiro de Lima, 1045","lat":-23.5562,"lng":-46.7061,"tipo":"Parada Convencional"},{"id":17,"distrito":"Alto de Pinheiros","nome":"Avenida Diógenes Ribeiro de Lima, 649","lat":-23.5594,"lng":-46.7034,"tipo":"Parada Convencional"},{"id":18,"distrito":"Alto de Pinheiros","nome":"Avenida Diógenes Ribeiro de Lima (Praça Pôr do Sol)","lat":-23.5612,"lng":-46.7018,"tipo":"Ponto de Interesse"},{"id":19,"distrito":"Alto de Pinheiros","nome":"Praça Cecília Perigo Saldiva","lat":-23.5629,"lng":-46.6998,"tipo":"Parada Convencional"},{"id":20,"distrito":"Pinheiros","nome":"Rua dos Macunis, 441","lat":-23.5645,"lng":-46.6979,"tipo":"Parada Convencional"},{"id":21,"distrito":"Pinheiros","nome":"Avenida Pedroso de Moraes, 1619","lat":-23.5658,"lng":-46.6962,"tipo":"Parada Convencional"},{"id":22,"distrito":"Pinheiros","nome":"Avenida Brigadeiro Faria Lima, 398","lat":-23.5668,"lng":-46.6953,"tipo":"Parada Convencional"},{"id":23,"distrito":"Pinheiros","nome":"Avenida Brigadeiro Faria Lima, 682 — Largo da Batata / Metrô Faria Lima","lat":-23.5673,"lng":-46.6948,"tipo":"Conexão Metrô (Linha 4-Amarela)"},{"id":24,"distrito":"Pinheiros","nome":"Avenida Brigadeiro Faria Lima, 1384","lat":-23.5731,"lng":-46.6896,"tipo":"Eixo Corporativo"},{"id":25,"distrito":"Pinheiros","nome":"Avenida Brigadeiro Faria Lima, 1828","lat":-23.5768,"lng":-46.6865,"tipo":"Eixo Corporativo"},{"id":26,"distrito":"Jardim Paulistano","nome":"Avenida Brigadeiro Faria Lima, 2528","lat":-23.5824,"lng":-46.6823,"tipo":"Eixo Corporativo"},{"id":27,"distrito":"Itaim Bibi","nome":"Avenida Brigadeiro Faria Lima, 3066","lat":-23.5867,"lng":-46.6791,"tipo":"Eixo Corporativo"},{"id":28,"distrito":"Itaim Bibi","nome":"Rua Aspásia","lat":-23.5881,"lng":-46.6775,"tipo":"Parada Convencional"},{"id":29,"distrito":"Itaim Bibi","nome":"Rua Tabapuã, 1007","lat":-23.5862,"lng":-46.6751,"tipo":"Parada Convencional"},{"id":30,"distrito":"Itaim Bibi","nome":"Rua Tabapuã, 865","lat":-23.5851,"lng":-46.6734,"tipo":"Parada Convencional"},{"id":31,"distrito":"Itaim Bibi","nome":"Rua Tabapuã, 587","lat":-23.5839,"lng":-46.6708,"tipo":"Parada Convencional"},{"id":32,"distrito":"Itaim Bibi","nome":"Rua Doutor Renato Paes de Barros, 550","lat":-23.5853,"lng":-46.6685,"tipo":"Parada Convencional"},{"id":33,"distrito":"Itaim Bibi","nome":"Avenida Presidente Juscelino Kubitschek, 627","lat":-23.5882,"lng":-46.6712,"tipo":"Eixo Corporativo"},{"id":34,"distrito":"Vila Nova Conceição","nome":"Rua Afonso Braz, 876","lat":-23.5931,"lng":-46.6689,"tipo":"Parada Convencional"},{"id":35,"distrito":"Vila Nova Conceição","nome":"Rua Afonso Braz, 707","lat":-23.5947,"lng":-46.6672,"tipo":"Parada Convencional"},{"id":36,"distrito":"Vila Nova Conceição","nome":"Rua Haberbeck Brandão, 104","lat":-23.5982,"lng":-46.6631,"tipo":"Parada Convencional"},{"id":37,"distrito":"Moema","nome":"Alameda dos Maracatins, 280","lat":-23.5998,"lng":-46.6612,"tipo":"Parada Convencional"},{"id":38,"distrito":"Moema","nome":"Avenida Moema, 137","lat":-23.6015,"lng":-46.6591,"tipo":"Parada Convencional"},{"id":39,"distrito":"Vila Clementino","nome":"Avenida Professor Ascendino Reis, 830","lat":-23.5968,"lng":-46.6542,"tipo":"Parada Convencional"},{"id":40,"distrito":"Vila Clementino","nome":"Avenida Professor Ascendino Reis, 1245","lat":-23.5979,"lng":-46.6521,"tipo":"Parada Convencional"},{"id":41,"distrito":"Vila Clementino","nome":"Avenida Professor Ascendino Reis, 2524 — Estação AACD-Servidor","lat":-23.5988,"lng":-46.6498,"tipo":"Conexão Metrô (Linha 5-Lilás)"},{"id":42,"distrito":"Vila Clementino","nome":"Rua Borges Lagoa, 1395","lat":-23.5981,"lng":-46.6486,"tipo":"Parada Convencional"},{"id":43,"distrito":"Vila Clementino","nome":"Rua Borges Lagoa, 895 — Hospital São Paulo / UNIFESP","lat":-23.5976,"lng":-46.6471,"tipo":"Polo Universitário e de Saúde"},{"id":44,"distrito":"Vila Clementino","nome":"Rua Borges Lagoa, 565","lat":-23.5989,"lng":-46.6425,"tipo":"Parada Convencional"},{"id":45,"distrito":"Vila Mariana","nome":"Rua Machado Bittencourt B/C","lat":-23.5997,"lng":-46.6382,"tipo":"Parada Convencional"},{"id":46,"distrito":"Vila Mariana","nome":"Terminal Metrô Santa Cruz — Ponto Final","lat":-23.6001,"lng":-46.6368,"tipo":"Conexão Metrô (Linhas 1-Azul e 5-Lilás)"}];
+const LINE = { linha: '875C-10', origem: 'Terminal Lapa', destino: 'Metrô Santa Cruz', km: 24.5, tempo: '1h15 a 1h30' };
+const SHORT = { 1: 'Terminal Lapa', 18: 'Praça Pôr do Sol', 23: 'Metrô Faria Lima', 41: 'Estação AACD-Servidor', 43: 'Hospital São Paulo', 46: 'Metrô Santa Cruz' };
+const nm = s => SHORT[s.id] || s.nome;
+const $ = id => document.getElementById(id);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const norm = t => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+const pl = (n, a, b) => n + ' ' + (n === 1 ? a : b);
+const S = { sim: false, modeChosen: false, nav: null, micOK: false, geoOK: false, blocked: false };
+const store = {
+  get(k) { try { return JSON.parse(localStorage.getItem('guia.' + k)); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem('guia.' + k, JSON.stringify(v)); } catch (e) {} },
+  del(k) { try { localStorage.removeItem('guia.' + k); } catch (e) {} }
+};
+let prefs = store.get('prefs') || {};
+
+/* ---------- tela: telas dos mockups (ouvindo, confirmação, trajeto, ônibus chegando, chegada). Só espelha a voz; nada é tocável. ---------- */
+const IC = { mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>', bus: '<rect x="4" y="3" width="16" height="14" rx="3"/><path d="M4 11h16M8 17v3M16 17v3"/><circle cx="8" cy="14" r=".6"/><circle cx="16" cy="14" r=".6"/>', check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>', pin: '<path d="M12 21s7-6.2 7-11a7 7 0 0 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/>', vol: '<path d="M4 10v4h3l4 3V7l-4 3H4z"/><path d="M15 9a4 4 0 0 1 0 6M17.5 6.5a8 8 0 0 1 0 11"/>', alert: '<path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17v.5"/>', clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', bars: '<path d="M6 10v4M10 6v12M14 9v6M18 7v10"/>', pencil: '<path d="M4 20l4-1L19 8l-3-3L5 16z"/>', vib: '<rect x="8" y="4" width="8" height="16" rx="2"/><path d="M4 8v8M20 8v8"/>' };
+const ic = n => '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">' + IC[n] + '</svg>';
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const eq = '<span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>';
+const PILL = { speaking: ['Falando em voz alta', 'vol'], listening: ['Ouvindo…', 'mic'], idle: ['Aguardando', 'mic'], blocked: ['Microfone bloqueado', 'alert'] };
+const pillHTML = () => '<span class="pill" data-pill>' + eq + '<span data-pill-txt>' + PILL[S.st || 'idle'][0] + '</span></span>';
+const simNote = () => S.sim ? '<p class="sim">Modo simulação: a posição é simulada, não é o GPS.</p>' : '';
+function setState(s) {
+  S.st = s; document.body.dataset.s = s;
+  document.querySelectorAll('[data-pill-txt]').forEach(e => e.textContent = PILL[s][0]);
+}
+function setCaption(t) { S.cap = t; document.querySelectorAll('[data-cap]').forEach(e => { e.textContent = t; e.classList.toggle('s', t.length > 70); }); }
+function setHeard(t) { S.heard = t; const e = document.querySelector('[data-heard]'); if (e) e.textContent = t ? '“' + t + '”' : '\u00a0'; }
+function setSimBanner() { if (S.view) show(S.view, S.vdata); }
+function show(name, d) {
+  S.view = name; S.vdata = d || {}; d = S.vdata; const ph = $('phone'), v = $('view');
+  ph.className = 'phone' + (name === 'near' ? ' tone-yellow' : name === 'arrive' ? ' tone-mint' : '');
+  const snd = '<p class="fine">' + ic('vol') + (prefs.vib === false ? 'Som ativo' : ic('vib') + 'Som e vibração ativos') + '</p>';
+  const micPill = '<div class="btn">' + ic('mic') + '<span data-pill-txt>' + PILL[S.st || 'idle'][0] + '</span></div>';
+  let h = '';
+  if (name === 'perm') {
+    const row = (i, a, b, ok) => '<div class="card"><span class="badge">' + ic(i) + '</span><div><b>' + a + '</b><span>' + b + '</span></div><em>' + (ok ? ic('check') + 'Liberado' : '') + '</em></div>';
+    h = simNote() + '<div class="top"><span class="gl">Guia por voz</span>' + pillHTML() + '</div><h1 class="h1 big" style="margin-top:8px">Antes de sair, duas permissões</h1>' +
+      '<div class="cards">' + row('pin', 'Localização', 'Para saber onde você está e avisar a hora de descer.', S.geoOK || S.sim) + row('mic', 'Microfone', 'Para ouvir seu destino e suas perguntas.', S.micOK) + '</div>' +
+      '<div class="grow"></div><p class="sub strong" data-cap>' + esc(S.cap || '') + '</p><p class="sub">Responda por voz: sim ou não.</p>';
+  } else if (name === 'blocked') {
+    const steps = d.frame
+      ? ['Abra o Guia direto no Chrome, em uma aba própria.', 'Quando o navegador perguntar, escolha Permitir.', 'Pronto: nas próximas vezes ele começa sozinho.']
+      : ['Abra o menu do navegador.', 'Vá em Configurações.', 'Privacidade e Segurança.', 'Configurações do Site.', 'Microfone: mude para Permitir.'];
+    h = '<div class="top"><span class="gl">Guia por voz</span>' + pillHTML() + '</div><h1 class="h1" style="margin-top:6px">Microfone bloqueado</h1>' +
+      '<p class="sub">' + (d.frame ? 'O Guia está aberto dentro de outra página, e o navegador não libera o microfone ali.' : 'Libere uma vez e ele passa a começar sozinho.') + '</p>' +
+      '<div class="cards">' + steps.map((s, i) => '<div class="card"><span class="badge" style="font-weight:800;font-size:20px">' + (i + 1) + '</span><div><b style="font-size:17px">' + esc(s) + '</b></div></div>').join('') + '</div>' +
+      '<div class="grow"></div><p class="sub c">Assim que liberar, eu percebo sozinho. Ou diga “Pronto”.</p>';
+  } else if (name === 'say') {
+    h = simNote() + '<div class="top"><span class="gl">Guia por voz</span>' + pillHTML() + '</div><div class="grow"></div>' + ic('mic').replace('class="ic"', 'class="ic" style="font-size:44px"') +
+      '<h1 class="h1" data-cap>' + esc(S.cap || '') + '</h1>' + (d.hint ? '<p class="sub">' + esc(d.hint) + '</p>' : '') +
+      (d.tip ? '<div class="tip"><b>Dica</b>' + esc(d.tip) + '</div>' : '') + '<div class="grow"></div>' + micPill;
+  } else if (name === 'listen') {
+    h = simNote() + '<div class="top"><span class="gl">Guia por voz</span>' + pillHTML() + '</div>' +
+      '<p class="sub strong c" data-cap style="margin-top:6px">' + esc(S.cap || '') + '</p><p class="quote" data-heard>' + (S.heard ? '“' + esc(S.heard) + '”' : '\u00a0') + '</p>' +
+      '<div class="mic" aria-hidden="true">' + ic('mic') + '</div><p class="sub c">Diga o nome ou o número da parada.</p><div class="grow"></div>' +
+      '<div class="infocard">' + ic('bus') + '<span>Linha piloto 875C-10<br>Terminal Lapa → Santa Cruz</span></div>';
+  } else if (name === 'confirm') {
+    h = simNote() + '<div class="top"><span class="gl">Guia por voz</span>' + pillHTML() + '</div><div class="grow"></div><p class="lbl">Você disse:</p><h1 class="h1 big">' + esc(d.dest) + '</h1>' +
+      '<div class="row">' + ic('bus') + '<span>Linha 875C-10, saindo de ' + esc(d.from) + '</span></div><div class="row">' + ic('clock') + '<span>Cerca de ' + d.mins + ' minutos (estimativa)</span></div>' +
+      '<div class="grow"></div><div class="acts"><div class="btn">' + ic('check') + 'Diga: confirmar</div><div class="btn o">' + ic('pencil') + 'Diga: corrigir</div></div>';
+  } else if (name === 'route') {
+    const n = S.nav, s = STOPS[n.idx], l = n.dest.id - s.id, mins = Math.max(1, Math.round(l * 1.83));
+    const items = [];
+    if (n.idx > n.origin.id - 1) items.push('<li class="done"><span class="node ok">' + ic('check') + '</span><div><b>' + esc(nm(n.origin)) + '</b><small>Embarque · feito</small></div></li>');
+    items.push('<li><span class="node here"></span><div><small>' + (n.paused ? 'PAUSADO · VOCÊ ESTÁ AQUI' : 'VOCÊ ESTÁ AQUI') + '</small><b>' + esc(nm(s)) + '</b></div></li>');
+    if (l > 1) items.push('<li><span class="node"></span><div><small>+ ' + (l - 1) + (l - 1 === 1 ? ' parada' : ' paradas') + '</small></div></li>');
+    items.push('<li><span class="node pin">' + ic('pin') + '</span><div><small>DESTINO · DESÇA AQUI</small><b>' + esc(nm(n.dest)) + '</b></div></li>');
+    h = simNote() + '<div class="head"><span class="bb">' + ic('bus') + '</span><h1>Faltam ' + l + (l === 1 ? ' parada' : ' paradas') + '</h1></div>' +
+      '<p class="sub" style="color:var(--text)">Você está no ônibus 875C-10 · cerca de ' + mins + ' min</p><ol class="tl">' + items.join('') + '</ol>' +
+      (S.ans ? '<div class="ans"><small class="lbl">Você perguntou</small><q>“' + esc(S.ans.q) + '”</q><small class="lbl">Resposta</small><p>' + esc(S.ans.a) + '</p></div>' : '') +
+      '<div class="grow"></div><div class="acts">' + micPill + '</div>' + snd;
+  } else if (name === 'near') {
+    const n = S.nav;
+    h = '<span class="badge-top">' + ic('alert') + 'Atenção</span>' + simNote() + '<div class="grow"></div><div class="big-badge" aria-hidden="true">' + ic('bus') + '</div>' +
+      '<h1 class="h1 big c">Desça na próxima parada</h1><p class="sub strong c">' + esc(nm(n.dest)) + '<br>Prepare-se para desembarcar</p><div class="grow"></div><div class="acts">' + micPill + '</div>' + snd;
+  } else if (name === 'arrive') {
+    h = simNote() + '<div class="grow"></div><div class="big-badge" aria-hidden="true">' + ic('check') + '</div><h1 class="h1 big c">Você chegou</h1><p class="bold c" style="margin:0;font-weight:800;font-size:22px;text-align:center">' + esc(d.dest) + '</p>' +
+      '<p class="sub strong c" style="font-size:17px">' + (d.sim ? 'Fim da simulação.' : 'Confira com o motorista antes de descer.') + '</p><div class="grow"></div>' +
+      '<div class="acts"><div class="btn">' + ic('mic') + 'Diga: novo destino</div><div class="btn o">Diga: encerrar guia</div></div>';
+  }
+  v.innerHTML = h; setState(S.st || 'idle');
+}
+function setTrip() { if (S.nav && S.nav.phase !== 'done') show(S.nav.dest.id - STOPS[S.nav.idx].id === 1 ? 'near' : 'route'); }
+
+/* ---------- sons e vibração ---------- */
+let actx = null;
+function tone(f, d, at) { try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); const o = actx.createOscillator(), g = actx.createGain(); o.frequency.value = f; g.gain.setValueAtTime(.0001, actx.currentTime + at); g.gain.exponentialRampToValueAtTime(.25, actx.currentTime + at + .01); g.gain.exponentialRampToValueAtTime(.0001, actx.currentTime + at + d); o.connect(g); g.connect(actx.destination); o.start(actx.currentTime + at); o.stop(actx.currentTime + at + d + .02); } catch (e) {} }
+const SND = { listen: [[880, .08]], ok: [[660, .1], [880, .14]], err: [[240, .25]], pass: [[620, .09]], near: [[700, .1], [700, .1], [700, .1]], arrive: [[523, .15], [659, .15], [784, .3]] };
+const VIB = { ok: [100], err: [300], pass: [100], near: [100, 80, 100, 80, 100], arrive: [400, 100, 100, 100, 100] };
+function sound(n) { let t = 0; (SND[n] || []).forEach(p => { tone(p[0], p[1], t); t += p[1] + .04; }); if (prefs.vib !== false && VIB[n] && navigator.vibrate) { try { navigator.vibrate(VIB[n]); } catch (e) {} } }
+function notify(title, body) { try { if (prefs.notif && window.Notification && Notification.permission === 'granted') new Notification(title, { body, silent: true }); } catch (e) {} }
+
+/* ---------- fala (SpeechSynthesis) ---------- */
+let voice = null, spTok = 0, speaking = false, speechBlocked = false;
+function pickVoice() { const v = speechSynthesis.getVoices(); voice = v.find(x => /pt-BR/i.test(x.lang) && /google|luciana|francisca|microsoft/i.test(x.name)) || v.find(x => /pt[-_]BR/i.test(x.lang)) || v.find(x => /^pt/i.test(x.lang)) || null; }
+if ('speechSynthesis' in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+function speak(text) {
+  return new Promise(res => {
+    setCaption(text); const my = ++spTok; stopRec(); speaking = true; setState('speaking');
+    let done = false, wd;
+    const fin = () => { if (done) return; done = true; clearTimeout(wd); if (my === spTok) { speaking = false; setState('idle'); startRec(); } res(); };
+    if (!('speechSynthesis' in window)) { wd = setTimeout(fin, 800 + text.length * 60); return; }
+    try { speechSynthesis.cancel(); } catch (e) {}
+    const u = new SpeechSynthesisUtterance(text); u.lang = 'pt-BR'; u.rate = .98; if (voice) u.voice = voice;
+    u.onend = fin; u.onerror = e => { if (e && e.error === 'not-allowed') speechBlocked = true; fin(); };
+    wd = setTimeout(fin, 2500 + text.length * 130);
+    setTimeout(() => { try { speechSynthesis.speak(u); } catch (e) { fin(); } }, 60);
+  });
+}
+/* Alguns navegadores só liberam a voz depois do primeiro gesto na página. Se isso acontecer, qualquer toque ou tecla libera; o Guia repete sozinho. */
+['pointerdown', 'keydown', 'touchstart'].forEach(ev => addEventListener(ev, () => { try { actx && actx.resume(); } catch (e) {} speechBlocked = false; }, { passive: true }));
+
+/* ---------- escuta (SpeechRecognition), sempre ativa, pausada só enquanto o Guia fala ---------- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null, recRunning = false, waiter = null, mainHandler = null;
+function startRec() {
+  if (!SR || speaking || recRunning || !S.micOK) return;
+  const r = new SR(); r.lang = 'pt-BR'; r.continuous = true; r.interimResults = false; r.maxAlternatives = 3; rec = r;
+  r.onstart = () => { recRunning = true; if (!speaking) setState('listening'); };
+  r.onresult = e => { for (let i = e.resultIndex; i < e.results.length; i++) if (e.results[i].isFinal) { const alts = Array.from(e.results[i]).map(a => a.transcript).filter(Boolean); if (alts.length) deliver(alts); } };
+  r.onerror = e => { if (e.error === 'not-allowed' || e.error === 'service-not-allowed') { S.micOK = false; S.blocked = true; setState('blocked'); } };
+  r.onend = () => { if (rec !== r) return; recRunning = false; if (!speaking && S.micOK) setTimeout(startRec, 250); };
+  try { r.start(); recRunning = true; } catch (e) { recRunning = false; }
+}
+function stopRec() { const r = rec; rec = null; recRunning = false; if (r) { r.onend = r.onresult = r.onerror = r.onstart = null; try { r.abort(); } catch (e) {} } }
+function deliver(alts) { if (!S.secret) setHeard(alts[0]); if (waiter) { const w = waiter; waiter = null; w(alts); } else if (mainHandler) mainHandler(alts); }
+function listenOnce(ms) { return new Promise(res => { const t = setTimeout(() => { waiter = null; res(null); }, ms); waiter = a => { clearTimeout(t); res(a); }; }); }
+
+/* ---------- perguntar e entender ---------- */
+const YES = /\b(sim|claro|pode|ok|okay|isso|positivo|afirmativo|autorizo|autorizar|permito|permitir|confirmo|confirmar|quero|certo|exato|correto)\b/;
+const NO = /\b(nao|negativo|jamais|nunca|cancelar|errado|incorreto|nem)\b/;
+const yn = n => NO.test(n) ? false : YES.test(n) ? true : undefined;
+const RE_SIM_OFF = /\b(desativar|desligar|sair d[ae]|encerrar|cancelar|fim d[ae]) (a )?(simulacao|modo teste)\b|\bmodo real\b/;
+const RE_SIM_ON = /\b(simulacao|simular|modo teste|modo de teste)\b/;
+/** Comandos globais, válidos em qualquer pergunta. Devolve true se tratou. */
+async function globalCmd(n) {
+  if (RE_SIM_OFF.test(n)) { if (S.sim || true) { S.sim = false; S.modeChosen = true; setSimBanner(); sound('ok'); await speak('Modo simulação desativado. Usando localização real.'); return true; } }
+  if (RE_SIM_ON.test(n) && !/\b(nao|sem)\b/.test(n)) { S.sim = true; S.modeChosen = true; setSimBanner(); sound('ok'); await speak('Modo simulação ativado.'); return true; }
+  return false;
+}
+/** Pergunta por voz, ouve e repete a pergunta se houver silêncio. Nunca fica travado esperando toque. */
+async function ask(prompt, parse, o) {
+  o = o || {}; let p = prompt; S.secret = !!o.raw; if (!S.secret && o.view !== 'keep') setHeard('');
+  if (o.view !== 'keep') show(o.view || 'say', o.view === 'confirm' ? S.vdata : { hint: o.hint !== undefined ? o.hint : (parse === yn ? 'Diga sim ou não.' : ''), tip: o.tip });
+  for (;;) {
+    await speak(p); if (S.micOK) sound('listen');
+    const alts = await listenOnce(o.wait || 10000);
+    if (!alts) { p = o.again || prompt; continue; }
+    if (!o.raw && !o.noGlobal) for (const a of alts) { if (await globalCmd(norm(a))) { p = o.again || prompt; alts.length = 0; break; } }
+    if (!alts.length) continue;
+    if (o.raw) { const r = parse(alts.map(norm)); if (r !== undefined) { S.secret = false; sound('ok'); return r; } p = 'Não entendi. ' + (o.again || prompt); continue; }
+    let retry = null;
+    for (const a of alts) { const v = parse(norm(a), a); if (v && v.retry) { retry = v.retry; continue; } if (v !== undefined && v !== null) { S.secret = false; sound('ok'); return v; } }
+    sound('err'); p = retry || ('Não entendi. ' + (o.again || prompt));
+  }
+}
+
+/* ---------- permissões (explicadas por voz, nunca pedidas sem aviso) ---------- */
+const permState = name => (navigator.permissions && navigator.permissions.query) ? navigator.permissions.query({ name }).then(r => r.state, () => 'prompt') : Promise.resolve('prompt');
+function waitPerm(name, ms) {
+  return new Promise(res => { let t = setTimeout(res, ms);
+    if (!navigator.permissions) return;
+    navigator.permissions.query({ name }).then(st => { st.onchange = () => { clearTimeout(t); res(); }; }, () => {}); });
+}
+async function unblockRound(name, instr) {
+  await speak(instr);
+  const rp = waitPerm(name, 20000);
+  const heard = listenOnce(20000).then(a => a && a.some(x => /\bpronto\b/.test(norm(x))) ? 'pronto' : null);
+  await Promise.race([rp, heard]); waiter = null; /* percebe sozinho a liberação ou ouve "Pronto"; sem resposta, o laço repete as instruções */
+}
+const framed = () => { try { return window.top !== window.self; } catch (e) { return true; } };
+const micPolicyBlocked = () => { try { return !!document.featurePolicy && !document.featurePolicy.allowsFeature('microphone'); } catch (e) { return false; } };
+const FRAME_MIC = 'O microfone está bloqueado porque o Guia está aberto dentro de outra página ou aplicativo. Abra o Guia direto no navegador Chrome, em uma aba própria. Na primeira vez, escolha Permitir. Depois disso, o Guia abre e começa sozinho.';
+const BLOCK_MIC = 'O microfone está bloqueado no navegador. Vou te ensinar a desbloquear. Passo 1: Abra o menu do navegador. Passo 2: Vá em Configurações. Passo 3: Procure por Privacidade e Segurança. Passo 4: Vá em Configurações do Site. Passo 5: Encontre Microfone e mude para Permitir. Quando terminar, diga Pronto.';
+const BLOCK_GEO = 'A localização está bloqueada no navegador. Vou te ensinar a desbloquear. Passo 1: Abra o menu do navegador. Passo 2: Vá em Configurações. Passo 3: Procure por Privacidade e Segurança. Passo 4: Vá em Configurações do Site. Passo 5: Encontre Localização e mude para Permitir. Quando terminar, diga Pronto.';
+const NATIVE_PROMPT = 'O navegador vai mostrar uma pergunta na tela. Use seus gestos de leitor de tela para ir até Permitir e dê dois toques. Estou aguardando.';
+/* Sem perguntas: o app começa a falar ao abrir e pede o microfone direto ao navegador (o aviso é do próprio navegador). */
+function requestMic() { return navigator.mediaDevices.getUserMedia({ audio: true }).then(s => { s.getTracks().forEach(t => t.stop()); S.micOK = true; S.blocked = false; startRec(); return true; }, () => false); }
+/* Só entra se o navegador negou o microfone: ensina a desbloquear e percebe sozinho quando for liberado (ou ao ouvir "Pronto"). */
+async function ensureMic() {
+  for (;;) {
+    const st = await permState('microphone');
+    if (st === 'granted' || S.micOK) { S.micOK = true; S.blocked = false; startRec(); return; }
+    if (st === 'denied' || micPolicyBlocked()) { setState('blocked'); const fr = framed() || micPolicyBlocked(); show('blocked', { frame: fr }); await unblockRound('microphone', fr ? FRAME_MIC : BLOCK_MIC); continue; }
+    if (await requestMic()) { sound('ok'); return; }
+    await speak('Preciso do microfone para ouvir você. Quando o navegador perguntar, escolha Permitir.');
+    await sleep(2500);
+  }
+}
+const getPos = (t) => new Promise((res, rej) => navigator.geolocation ? navigator.geolocation.getCurrentPosition(p => res({ lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy }), rej, { enableHighAccuracy: true, timeout: t || 15000, maximumAge: 5000 }) : rej({ code: 0 }));
+async function offerSim() {
+  const sim = await ask('Sem localização, posso usar o modo simulação. Você quer usar o modo simulação? Diga sim ou não.', yn, { noGlobal: true });
+  if (sim) { S.sim = true; S.modeChosen = true; setSimBanner(); await speak('Modo simulação ativado.'); return true; }
+  await speak('Sem localização e sem simulação, não consigo guiar você.'); return false;
+}
+/* ---------- cadastro 100% por voz, com persistência ---------- */
+async function sha(t, salt) { try { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + t)); return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join(''); } catch (e) { let h = 5381; (salt + t).split('').forEach(c => h = ((h << 5) + h + c.charCodeAt(0)) | 0); return 'x' + h; } }
+const parseName = (n, raw) => { const c = n.replace(/\b(meu nome e|me chamo|pode me chamar de|me chame de|eu sou o|eu sou a|eu sou|sou o|sou a|nome)\b/g, '').trim(); if (c.length < 2 || c.split(' ').length > 4) return undefined; return c.split(' ').map(w => w[0].toUpperCase() + w.slice(1)).join(' '); };
+async function register() {
+  const pend = store.get('reg') || {}; let name = pend.name;
+  while (!name) {
+    const n = await ask('Vamos começar seu cadastro. Como você gostaria de ser chamado?', parseName, { again: 'Como você gostaria de ser chamado?' });
+    const ok = await ask('Entendi. Você disse ' + n + '. Posso cadastrar esse nome? Diga sim ou não.', yn);
+    if (ok) { name = n; store.set('reg', { name }); }
+  }
+  let agreed;
+  for (;;) {
+    const w1 = await ask('Agora, escolha uma palavra-chave de segurança. Diga sua palavra agora.', a => a[0] && a[0].length >= 2 ? a : undefined, { raw: true, tip: 'Escolha uma palavra só, que você não costuma falar no dia a dia.', hint: '' });
+    const w2 = await ask('Repita sua palavra-chave para confirmar.', a => a[0] && a[0].length >= 2 ? a : undefined, { raw: true });
+    const hit = w1.find(x => w2.indexOf(x) >= 0);
+    if (hit) { agreed = hit; break; }
+    await speak('As palavras não coincidem. Vamos tentar de novo.');
+  }
+  const salt = Math.random().toString(36).slice(2);
+  store.set('profile', { name, salt, kw: await sha(agreed, salt) }); /* só o hash fica salvo; a palavra nunca é falada nem exibida */
+  store.del('reg'); sound('arrive');
+  await speak('Seu cadastro foi concluído com sucesso. Agora podemos começar.');
+}
+
+/* ---------- paradas: reconhecimento de nomes e números ---------- */
+const ALIAS = [[/\bterminal lapa\b/, [1]], [/\bpor do sol\b/, [18]], [/\b(metro faria lima|estacao faria lima|largo da batata|batata)\b/, [23]], [/\bsanta cruz\b/, [46]], [/\b(hospital|unifesp)\b/, [43]], [/\baacd\b/, [41]]];
+const STOPW = ['rua', 'avenida', 'av', 'de', 'da', 'do', 'dos', 'das', 'parada', 'estou', 'estamos', 'na', 'no', 'em', 'quero', 'ir', 'para', 'pra', 'o', 'a', 'e', 'to', 'tou', 'minha', 'localizacao', 'esta', 'agora', 'perto', 'ponto', 'onibus', 'vou', 'destino', 'ate'];
+const tk = s => norm(s).split(' ').filter(t => t && STOPW.indexOf(t) < 0);
+function findStops(n) {
+  const m = n.match(/\b(?:parada |numero )?(\d{1,2})\b/);
+  if (m && +m[1] >= 1 && +m[1] <= 46 && (/parada|numero/.test(n) || /^\d{1,2}$/.test(n))) return [STOPS[+m[1] - 1]];
+  for (const [re, ids] of ALIAS) if (re.test(n)) return ids.map(i => STOPS[i - 1]);
+  const q = tk(n); if (!q.length) return [];
+  let best = [], bs = 0;
+  STOPS.forEach(s => { const st = tk(s.nome + ' ' + s.distrito); let hit = 0, strong = false; q.forEach(t => { if (st.indexOf(t) >= 0) { hit++; if (t.length >= 3 && !/^\d+$/.test(t)) strong = true; } }); const sc = hit / q.length; if (!strong || sc < .6) return; if (sc > bs) { bs = sc; best = [s]; } else if (sc === bs) best.push(s); });
+  return best;
+}
+const EXAMPLES = 'Tente, por exemplo: Terminal Lapa, Rua Roma, Praça Pôr do Sol, Metrô Faria Lima, Hospital São Paulo ou Metrô Santa Cruz.';
+function stopParser(label, o) {
+  return (n) => {
+    const ms = findStops(n);
+    if (ms.length === 1) return ms[0];
+    if (ms.length > 5) return { retry: 'Encontrei várias paradas com esse nome. Diga o endereço completo ou o número da parada. ' + label };
+    if (ms.length > 1) return { multi: ms };
+    return { retry: 'Não encontrei essa parada na linha 875C-10. ' + EXAMPLES + ' ' + label };
+  };
+}
+async function askStop(prompt, label, view) {
+  const parse = stopParser(label);
+  let v = await ask(prompt, n => { const r = parse(n); return r && r.multi ? r : r; }, { again: label, view: view || 'listen' });
+  while (v && v.multi) {
+    const opts = v.multi.slice(0, 4);
+    v = await ask('Encontrei ' + opts.length + ' opções: ' + opts.map(s => 'parada ' + s.id + ', ' + nm(s)).join('; ') + '. Diga o número da parada.', n => { const x = findStops(n).filter(s => opts.indexOf(s) >= 0); return x.length === 1 ? x[0] : undefined; }, { again: 'Diga o número da parada.' });
+  }
+  return v;
+}
+
+/* ---------- geometria ---------- */
+function dist(a, b) { const R = 6371000, r = x => x * Math.PI / 180, dLa = r(b.lat - a.lat), dLo = r(b.lng - a.lng), h = Math.sin(dLa / 2) ** 2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(dLo / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); }
+const fmtD = m => m >= 1000 ? (m / 1000).toFixed(1).replace('.', ',') + ' quilômetros' : Math.max(10, Math.round(m / 10) * 10) + ' metros';
+function nearest(pos, from, to) { let b = null; for (let i = from; i <= to; i++) { const d = dist(pos, STOPS[i]); if (!b || d < b.d) b = { i, d, s: STOPS[i] }; } return b; }
+
+/* ---------- planejar viagem ---------- */
+async function planTrip(first) {
+  let prompt = first || 'Para onde você deseja ir?';
+  for (;;) {
+    const dest = await askStop(prompt, 'Para onde você deseja ir?'); prompt = 'Para onde você deseja ir?';
+    if (dest.id === 1) { await speak('O Terminal Lapa é o ponto inicial da linha. Só tenho o sentido Terminal Lapa para Metrô Santa Cruz. Escolha outro destino.'); continue; }
+    let origin = null; const askOrigin = () => askStop('Onde você está agora?', 'Onde você está agora?');
+    if (S.sim) origin = await askOrigin();
+    else {
+      await speak('Estou identificando sua localização.');
+      let pos = null; try { pos = await getPos(20000); S.geoOK = true; } catch (e) {}
+      if (!pos) { if (await offerSim()) origin = await askOrigin(); else continue; }
+      else {
+        const nr = nearest(pos, 0, Math.max(0, dest.id - 2));
+        if (nr.d > 2500) { await speak('Você está a ' + fmtD(nr.d) + ' da linha 875C-10.'); if (await offerSim()) origin = await askOrigin(); else continue; }
+        else { origin = nr.s; origin.dist = nr.d; }
+      }
+    }
+    if (dest.id <= origin.id) { await speak('Essa parada fica para trás. A linha 875C-10 só vai do Terminal Lapa ao Metrô Santa Cruz. Vamos escolher o destino de novo.'); continue; }
+    const mins = Math.max(1, Math.round((dest.id - origin.id) * 1.83));
+    S.vdata = { dest: nm(dest), from: nm(origin), mins };
+    const ok = await ask('Entendi: ' + nm(dest) + ', pela linha 875C-10, saindo de ' + nm(origin) + (!S.sim && origin.dist != null ? ', a ' + fmtD(origin.dist) + ' de você' : '') + '. Cerca de ' + mins + ' minutos, é uma estimativa. Diga confirmar ou corrigir.', n => /\b(corrigir|corrige|errado|nao|voltar)\b/.test(n) ? false : /\b(confirmar|confirmo|confirma|sim|certo|isso|ok|pode)\b/.test(n) ? true : undefined, { view: 'confirm', again: 'Diga confirmar ou corrigir.' });
+    if (!ok) { prompt = 'Certo. Para onde você quer ir?'; continue; }
+    return { origin, dest };
+  }
+}
+
+/* ---------- viagem: simulação e GPS real, comandos por voz ---------- */
+const NAV_MS = 5000;
+function drawTrip() { if (S.nav) setTrip(); }
+function passMsg(s, l, n) {
+  const nx = STOPS[s.id], d = dist(s, nx);
+  if (l === 1) return 'Atenção: desça na próxima parada, ' + nm(n.dest) + '. Passando pela parada ' + nm(s) + '. Falta 1 parada.';
+  return 'Atenção: passando pela parada ' + nm(s) + '. Faltam ' + pl(l, 'parada', 'paradas') + '. Próxima: ' + nm(nx) + ', a ' + fmtD(d) + '.';
+}
+async function arrive(n) {
+  const my = n.tok = (n.tok || 0) + 1; clearTimeout(n.timer); n.phase = 'done'; sound('arrive'); notify('GuIa', 'Você chegou: ' + nm(n.dest));
+  show('arrive', { dest: nm(n.dest), sim: n.sim });
+  await speak('Você chegou ao seu destino: ' + nm(n.dest) + '.' + (n.dest.id === 46 ? ' Fim da linha.' : '') + (n.sim ? ' Fim da simulação.' : '')); n.done('arrived');
+}
+async function step(n, manual) {
+  if (n.phase === 'done') return;
+  n.idx++; const s = STOPS[n.idx], l = n.dest.id - s.id; const my = ++n.tok; n.count++;
+  if (l <= 0) return arrive(n);
+  sound(l === 1 ? 'near' : 'pass'); if (l === 1) notify('GuIa', 'Desça na próxima parada: ' + nm(n.dest));
+  S.ans = null; drawTrip(); let msg = passMsg(s, l, n); if (n.sim && n.count % 6 === 0) msg += ' Lembrete: você está no modo simulação.';
+  await speak(msg);
+  if (my === n.tok && n.sim && !n.paused) schedule(n);
+}
+function schedule(n) { clearTimeout(n.timer); const my = n.tok; n.timer = setTimeout(() => { if (my === n.tok && !n.paused && n.phase !== 'done') step(n, false); }, NAV_MS); }
+async function watchTick(n, c) {
+  if (n.paused || n.phase === 'done') return;
+  const pos = { lat: c.latitude, lng: c.longitude }, nr = nearest(pos, n.idx, n.dest.id - 1);
+  n.lastPos = pos; n.lastNear = nr;
+  if (nr.i > n.idx && nr.d <= Math.max(90, (c.accuracy || 0) * 1.2)) { n.idx = nr.i - 1; await step(n, false); }
+  else if (!n.nearSaid && n.dest.id - 1 > n.idx && dist(pos, n.dest) <= 150) { n.nearSaid = true; sound('near'); await speak('Você está chegando em ' + nm(n.dest) + '. Prepare-se para desembarcar.'); }
+  if (dist(pos, n.dest) <= 50 && n.phase !== 'done') { n.idx = n.dest.id - 2; await step(n, false); }
+}
+function where(n) { const s = STOPS[n.idx], l = n.dest.id - s.id; return 'Você está na parada ' + s.id + ', ' + nm(s) + '. Faltam ' + pl(l, 'parada', 'paradas') + ' até ' + nm(n.dest) + '.' + (n.sim ? ' Atenção: você está no modo simulação.' : ''); }
+const HELP = 'Você pode dizer: avançar, para pular uma parada na simulação. Parar, para pausar. Continuar. Onde estou. Próxima parada. Repetir. Para onde vou. Modo real, ou ativar simulação. Ou sair, para encerrar a viagem.';
+async function reply(n, text) { S.ans = { q: n.asked || '', a: text }; if (S.view === 'route' || S.view === 'near') show(S.view); await speak(text); }
+async function navCmd(n, c) {
+  const m = c;
+  if (/\b(sair|encerrar|cancelar viagem|cancelar rota|terminar)\b/.test(m) && !RE_SIM_OFF.test(m)) { clearTimeout(n.timer); n.phase = 'done'; n.tok++; await speak('Viagem encerrada.'); n.done('cancel'); return true; }
+  if (RE_SIM_OFF.test(m)) { clearTimeout(n.timer); n.phase = 'done'; n.tok++; S.sim = false; S.modeChosen = true; setSimBanner(); await speak('Modo simulação desativado. Usando localização real.'); n.done('cancel'); return true; }
+  if (/\bajuda\b/.test(m)) { await reply(n, HELP); return true; }
+  if (/\b(onde estou|onde eu estou)\b/.test(m)) { await reply(n, where(n)); if (!n.sim && n.lastNear) await speak('O GPS indica a parada mais próxima a ' + fmtD(n.lastNear.d) + '.'); return true; }
+  if (/\b(para onde vou|destino)\b/.test(m)) { await reply(n, 'Seu destino é ' + nm(n.dest) + ', parada ' + n.dest.id + '. Faltam ' + pl(n.dest.id - STOPS[n.idx].id, 'parada', 'paradas') + '.'); return true; }
+  if (/\bproxima parada\b|\bproximo ponto\b/.test(m)) { const nx = STOPS[Math.min(n.idx + 1, 45)], d = dist(n.lastPos || STOPS[n.idx], nx); await reply(n, 'Próxima parada: ' + nm(nx) + '. Distância aproximada: ' + fmtD(d) + '.'); return true; }
+  if (/\b(repetir|repete|ouvir de novo)\b/.test(m)) { await reply(n, S.lastNavMsg || where(n)); return true; }
+  if (/\b(avancar|avanca|pular)\b/.test(m)) { if (!n.sim) { await speak('Avançar só funciona na simulação. Na localização real, eu acompanho pelo GPS.'); return true; } clearTimeout(n.timer); await step(n, true); return true; }
+  if (/\b(parar|pare|pausar|pausa|espera|aguarde)\b/.test(m)) { n.paused = true; n.tok++; clearTimeout(n.timer); drawTrip(); await speak('Pausado na parada ' + nm(STOPS[n.idx]) + '. Diga continuar para seguir' + (n.sim ? ', ou avançar para pular uma parada.' : '.')); return true; }
+  if (/\b(continuar|continua|retomar|prosseguir|seguir)\b/.test(m)) { if (n.paused) { n.paused = false; n.tok++; drawTrip(); await speak('Retomando. Você está na parada ' + nm(STOPS[n.idx]) + '.'); if (n.sim) schedule(n); } else await speak('A viagem já está em andamento.'); return true; }
+  if (RE_SIM_ON.test(m)) { if (n.sim) await speak('A simulação já está ativa.'); else await speak('Para simular, encerre esta viagem dizendo sair e depois diga simulação.'); return true; }
+  return false;
+}
+async function runTrip(t) {
+  const n = S.nav = { origin: t.origin, dest: t.dest, idx: t.origin.id - 1, paused: false, tok: 0, sim: S.sim, timer: null, count: 0, phase: 'run', nearSaid: false };
+  const finished = new Promise(r => n.done = r); let watch = null, busy = false, wl = null;
+  try { if (navigator.wakeLock) navigator.wakeLock.request('screen').then(l => wl = l, () => {}); } catch (e) {}
+  mainHandler = async alts => { if (busy) return; busy = true; n.asked = alts[0]; try { for (const a of alts) { if (await navCmd(n, norm(a))) return; } sound('err'); } finally { busy = false; } };
+  const L = t.dest.id - t.origin.id; S.ans = null; drawTrip();
+  if (n.sim) {
+    await speak('Perfeito. Simulando o trajeto da linha 875C-10 até ' + nm(t.dest) + '. Você está na parada ' + nm(t.origin) + '. Faltam ' + pl(L, 'parada', 'paradas') + ' até o destino. Atenção: você está no modo simulação.');
+    schedule(n);
+  } else {
+    watch = navigator.geolocation.watchPosition(p => watchTick(n, p.coords), e => { if (e.code === 1) { n.paused = true; speak('A permissão de localização foi retirada. Diga modo real quando liberar, ou ativar simulação.'); } }, { enableHighAccuracy: true, maximumAge: 2000, timeout: 20000 });
+    await speak('Navegação iniciada até ' + nm(t.dest) + ', linha 875C-10. Faltam ' + pl(L, 'parada', 'paradas') + '. Eu aviso cada parada pelo GPS. Diga ajuda para ouvir os comandos.');
+  }
+  const r = await finished;
+  clearTimeout(n.timer); if (watch != null) navigator.geolocation.clearWatch(watch); try { wl && wl.release(); } catch (e) {}
+  mainHandler = null; S.nav = null; S.ans = null;
+  return r;
+}
+
+/* ---------- ciclo principal ---------- */
+async function mainLoop(first) {
+  for (;;) {
+    const trip = await planTrip(first); first = null;
+    await runTrip(trip); /* a tela de chegada fica visível durante a pergunta */
+    const again = await ask('Quer fazer uma nova viagem? Diga novo destino, ou encerrar guia.', n => /\b(encerrar|encerra|nao|sair|fim)\b/.test(n) ? false : /\b(novo|nova|outro|outra|sim|quero|destino)\b/.test(n) ? true : undefined, { view: 'keep' });
+    if (!again) await ask('Tudo bem. Estou ouvindo. Diga Para onde vou, quando quiser ir a algum lugar.', n => /\b(para onde|destino|viagem|ir|quero|guia|comecar)\b/.test(n) ? true : undefined, { wait: 45000 });
+    first = 'Para onde você gostaria de ir?';
+  }
+}
+/* Ao abrir, já começa: verifica perfil e permissões em silêncio e fala na hora. Sem pergunta de permissão, sem "Diga Começar". */
+async function boot() {
+  show('say'); setState('idle');
+  if (!SR) { setCaption('Este navegador não tem reconhecimento de voz. Abra o GuIa no Chrome.'); await speak('Este navegador não tem reconhecimento de voz. Abra o Guia no Chrome do Android ou do computador.'); return; }
+  const profile = store.get('profile');
+  if (prefs.vib === undefined) prefs.vib = true;
+  if (prefs.notif === undefined) prefs.notif = false;
+  const [mic, geo] = await Promise.all([permState('microphone'), permState('geolocation')]);
+  if (mic === 'granted') { S.micOK = true; startRec(); }
+  if (geo === 'granted') S.geoOK = true;
+  const micReq = S.micOK ? Promise.resolve(true) : requestMic(); /* o aviso do navegador aparece enquanto o Guia já está falando */
+  const hello = profile ? 'Bem-vindo de volta, ' + profile.name + '. Estou ouvindo.' : 'Bem-vindo ao Guia. Estou ouvindo.';
+  let spoke = false;
+  if (!S.micOK) { await speak(hello); spoke = true; if (!(await micReq)) await ensureMic(); show('say'); }
+  sound('ok');
+  /* localização: pedida ao navegador em segundo plano; se for negada, o Guia oferece a simulação só quando for preciso */
+  if (!S.geoOK && navigator.geolocation) getPos(20000).then(() => { S.geoOK = true; }, () => {});
+  if (profile) return mainLoop(spoke ? 'Para onde você gostaria de ir hoje?' : hello + ' Para onde você gostaria de ir hoje?');
+  if (!spoke) await speak(hello);
+  await register();
+  return mainLoop('Para onde você deseja ir?');
+}
+window.addEventListener('load', () => boot().catch(e => { console.error(e); setCaption('Algo falhou. Recarregue a página.'); }));
+window.Guia = { S, STOPS, deliver, findStops, store, speak, show, setState };
+</script>
+</body>
+</html>
