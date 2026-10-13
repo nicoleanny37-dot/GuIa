@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#160a22">
-<link rel="manifest" href="manifest.webmanifest">
+<link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-180.png">
 <meta name="mobile-web-app-capable" content="yes">
@@ -108,12 +108,287 @@ body[data-s=listening] .mic::after{animation:ring 1.6s ease-out .8s infinite}
 <body>
 <div class="stage"><div class="phone" id="phone"><div class="view" id="view" aria-hidden="true"></div></div></div>
 <script>
+/* ==========================================================================
+   linha875c10.js — ARQUIVO MESTRE DE TRAJETO da linha 875C-10
+   Terminal Lapa → Metrô Santa Cruz · 46 paradas · 24,5 km · 1h15 a 1h30
+   Garante a ORDEM EXATA das paradas (id 1 a 46) e o reconhecimento inteligente do que o usuário fala.
+   ========================================================================== */
+const LINHA_875C10 = {
+  linha: "875C-10",
+  origem: "Terminal Lapa",
+  destino: "Metrô Santa Cruz",
+  distancia_km: 24.5,
+  tempo_medio: "1h15 - 1h30",
+  paradas: [
+    { id: 1, nome: "Terminal Lapa — Plataforma Interna Linha 875C-10", nome_curto: "Terminal Lapa", distrito: "Lapa", lat: -23.518600, lng: -46.697400, tipo: "Terminal de Origem",
+      apelidos: ["ponto inicial", "inicio da linha", "primeira parada"], ruas: [], numeros: [], bairros: ["lapa"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: ["terminal lapa"],
+      palavras_chave: ["ponto inicial", "inicio da linha", "primeira parada", "terminal lapa", "lapa"] },
+    { id: 2, nome: "Rua Roma, 636", nome_curto: "Rua Roma", distrito: "Lapa", lat: -23.522100, lng: -46.696100, tipo: "Parada Convencional",
+      apelidos: [], ruas: ["rua roma", "roma"], numeros: ["636"], bairros: ["lapa"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
+      palavras_chave: ["rua roma", "roma", "636", "lapa"] },
+    { id: 3, nome: "Rua Nossa Senhora da Lapa, 49", nome_curto: "Nossa Senhora da Lapa", distrito: "Lapa", lat: -23.523500, lng: -46.697800, tipo: "Parada Convencional",
+      apelidos: [], ruas: ["rua nossa senhora da lapa", "nossa senhora da lapa", "nossa senhora"], numeros: ["49"], bairros: ["lapa"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
+      palavras_chave: ["rua nossa senhora da lapa", "nossa senhora da lapa", "nossa senhora", "49", "lapa"] },
+    { id: 4, nome: "Rua Pio XI, 80", nome_curto: "Pio XI, 80", distrito: "Lapa", lat: -23.525200, lng: -46.701100, tipo: "Parada Convencional",
+      apelidos: [], ruas: ["rua pio xi", "pio xi"], numeros: ["80"], bairros: ["lapa"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
+      palavras_chave: ["rua pio xi", "pio xi", "80", "lapa"] },
+    { id: 5, nome: "Rua Pio XI, 698", nome_curto: "Pio XI, 698", distrito: "Alto da Lapa", lat: -23.529800, lng: -46.705800, tipo: "Parada Convencional",
+      apelidos: [], ruas: ["rua pio xi", "pio xi"], numeros: ["698"], bairros: ["alto da lapa"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
+      palavras_chave: ["rua pio xi", "pio xi", "698", "alto da lapa"] },
+    { id: 6, nome: "Praça Oswaldo Zanini", nome_curto: "Oswaldo Zanini", distrito: "Alto da Lapa", lat: -23.533200, lng: -46.708900, tipo: "Parada Convencional",
+      apelidos: [], ruas: ["praca oswaldo zanini", "oswaldo zanini", "zanini"], numeros: [], bairros: ["alto da lapa"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
+      palavras_chave: ["praca oswaldo zanini", "oswaldo zanini", "zanini", "alto da lapa"] },
+    { id: 7, nome: "Rua Doutor José Elias, 227", nome_curto: "José Elias, 227", distrito: "Alto da Lapa", lat: -23.535800, lng: -46.711400, tipo: "Parada Convencional",
+      apelidos: [], ruas: ["rua doutor jose elias", "doutor jose elias", "dr jose elias", "jose elias"], numeros: ["227"], bairros: ["alto da lapa"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
+      palavras_chave: ["rua doutor jose elias", "doutor jose elias", "dr jose elias", "jose elias", "227", "alto da lapa"] },
+    { id: 8, nome: "Rua Doutor José Elias, 302", nome_curto: "José Elias, 302", distrito: "Alto da Lapa", lat: -23.537200, lng: -46.712600, tipo: "Parada Convencional",
+      apelidos: [], ruas: ["rua doutor jose elias", "doutor jose elias", "dr jose elias", "jose elias"], numeros: ["302"], bairros: ["alto da lapa"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
+      palavras_chave: ["rua doutor jose elias", "doutor jose elias", "dr jose elias", "jose elias", "302", "alto da lapa"] },
+    { id: 9, nome: "Rua Barbalha, 355", nome_curto: "Barbalha, 355", distrito: "Alto da Lapa", lat: -23.539500, lng: -46.714200, tipo: "Parada Convencional",
+      apelidos: [], ruas: ["rua barbalha", "barbalha"], numeros: ["355"], bairros: ["alto da lapa"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
+      palavras_chave: ["rua barbalha", "barbalha", "355", "alto da lapa"] },
+    { id: 10, nome: "Rua Barbalha, 95", nome_curto: "Barbalha, 95", distrito: "Alto da Lapa", lat: -23.541300, lng: -46.715300, tipo: "Parada Convencional",
+      apelidos: [], ruas: ["rua barbalha", "barbalha"], numeros: ["95"], bairros: ["alto da lapa"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
+      palavras_chave: ["rua barbalha", "barbalha", "95", "alto da lapa"] },
+    { id: 11, nome: "Avenida Diógenes Ribeiro de Lima, 2345", nome_curto: "Diógenes, 2345", distrito: "Alto de Pinheiros", lat: -23.543500, lng: -46.716100, tipo: "Parada Convencional",
+      apelidos: [], ruas: ["avenida diogenes ribeiro de lima", "av diogenes ribeiro de lima", "diogenes ribeiro de lima", "diogenes ribeiro", "diogenes"], numeros: ["2345"], bairros: ["alto de pinheiros"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
+      palavras_chave: ["avenida diogenes ribeiro de lima", "av diogenes ribeiro de lima", "diogenes ribeiro de lima", "diogenes ribeiro", "diogenes", "2345", "alto de pinheiros"] },
+    { id: 12, nome: "Avenida Diógenes Ribeiro de Lima, 2200", nome_curto: "Diógenes, 2200", distrito: "Alto de Pinheiros", lat: -23.545800, lng: -46.714800, tipo: "Parada Convencional",
+      apelidos: [], ruas: ["avenida diogenes ribeiro de lima", "av diogenes ribeiro de lima", "diogenes ribeiro de lima", "diogenes ribeiro", "diogenes"], numeros: ["2200"], bairros: ["alto de pinheiros"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
+      palavras_chave: ["avenida diogenes ribeiro de lima", "av diogenes ribeiro de lima", "diogenes ribeiro de lima", "diogenes ribeiro", "diogenes", "2200", "alto de pinheiros"] },
+    { id: 13, nome: "Avenida Diógenes Ribeiro de Lima, 1900", nome_curto: "Diógenes, 1900", distrito: "Alto de Pinheiros", lat: -23.548200, lng: -46.713200, tipo: "Parada Convencional",
+      apelidos: [], ruas: ["avenida diogenes ribeiro de lima", "av diogenes ribeiro de lima", "diogenes ribeiro de lima", "diogenes ribeiro", "diogenes"], numeros: ["1900"], bairros: ["alto de pinheiros"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
+      palavras_chave: ["avenida diogenes ribeiro de lima", "av diogenes ribeiro de lima", "diogenes ribeiro de lima", "diogenes ribeiro", "diogenes", "1900", "alto de pinheiros"] },
+    { id: 14, nome: "Avenida Diógenes Ribeiro de Lima, 1768", nome_curto: "Diógenes, 1768", distrito: "Alto de Pinheiros", lat: -23.550100, lng: -46.711500, tipo: "Parada Convencional",
+      apelidos: [], ruas: ["avenida diogenes ribeiro de lima", "av diogenes ribeiro de lima", "diogenes ribeiro de lima", "diogenes ribeiro", "diogenes"], numeros: ["1768"], bairros: ["alto de pinheiros"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
+      palavras_chave: ["avenida diogenes ribeiro de lima", "av diogenes ribeiro de lima", "diogenes ribeiro de lima", "diogenes ribeiro", "diogenes", "1768", "alto de pinheiros"] },
+    { id: 15, nome: "Avenida Diógenes Ribeiro de Lima, 1321", nome_curto: "Diógenes, 1321", distrito: "Alto de Pinheiros", lat: -23.553400, lng: -46.708300, tipo: "Parada Convencional",
+      apelidos: [], ruas: ["avenida diogenes ribeiro de lima", "av diogenes ribeiro de lima", "diogenes ribeiro de lima", "diogenes ribeiro", "diogenes"], numeros: ["1321"], bairros: ["alto de pinheiros"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
+      palavras_chave: ["avenida diogenes ribeiro de lima", "av diogenes ribeiro de lima", "diogenes ribeiro de lima", "diogenes ribeiro", "diogenes", "1321", "alto de pinheiros"] },
+    { id: 16, nome: "Avenida Diógenes Ribeiro de Lima, 1045", nome_curto: "Diógenes, 1045", distrito: "Alto de Pinheiros", lat: -23.556200, lng: -46.706100, tipo: "Parada Convencional",
+      apelidos: [], ruas: ["avenida diogenes ribeiro de lima", "av diogenes ribeiro de lima", "diogenes ribeiro de lima", "diogenes ribeiro", "diogenes"], numeros: ["1045"], bairros: ["alto de pinheiros"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
+      palavras_chave: ["avenida diogenes ribeiro de lima", "av diogenes ribeiro de lima", "diogenes ribeiro de lima", "diogenes ribeiro", "diogenes", "1045", "alto de pinheiros"] },
+    { id: 17, nome: "Avenida Diógenes Ribeiro de Lima, 649", nome_curto: "Diógenes, 649", distrito: "Alto de Pinheiros", lat: -23.559400, lng: -46.703400, tipo: "Parada Convencional",
+      apelidos: [], ruas: ["avenida diogenes ribeiro de lima", "av diogenes ribeiro de lima", "diogenes ribeiro de lima", "diogenes ribeiro", "diogenes"], numeros: ["649"], bairros: ["alto de pinheiros"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
+      palavras_chave: ["avenida diogenes ribeiro de lima", "av diogenes ribeiro de lima", "diogenes ribeiro de lima", "diogenes ribeiro", "diogenes", "649", "alto de pinheiros"] },
+    { id: 18, nome: "Avenida Diógenes Ribeiro de Lima (Praça Pôr do Sol)", nome_curto: "Praça Pôr do Sol", distrito: "Alto de Pinheiros", lat: -23.561200, lng: -46.701800, tipo: "Ponto de Interesse",
+      apelidos: ["por do sol"], ruas: ["avenida diogenes ribeiro de lima", "av diogenes ribeiro de lima", "diogenes ribeiro de lima", "diogenes ribeiro", "diogenes"], numeros: [], bairros: ["alto de pinheiros"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: ["praca por do sol", "por do sol"],
+      palavras_chave: ["por do sol", "praca por do sol", "avenida diogenes ribeiro de lima", "av diogenes ribeiro de lima", "diogenes ribeiro de lima", "diogenes ribeiro", "diogenes", "alto de pinheiros"] },
+    { id: 19, nome: "Praça Cecília Perigo Saldiva", nome_curto: "Cecília Saldiva", distrito: "Alto de Pinheiros", lat: -23.562900, lng: -46.699800, tipo: "Parada Convencional",
+      apelidos: [], ruas: ["praca cecilia perigo saldiva", "cecilia perigo saldiva", "cecilia saldiva", "saldiva", "cecilia"], numeros: [], bairros: ["alto de pinheiros"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
+      palavras_chave: ["praca cecilia perigo saldiva", "cecilia perigo saldiva", "cecilia saldiva", "saldiva", "cecilia", "alto de pinheiros"] },
+    { id: 20, nome: "Rua dos Macunis, 441", nome_curto: "Macunis, 441", distrito: "Pinheiros", lat: -23.564500, lng: -46.697900, tipo: "Parada Convencional",
+      apelidos: [], ruas: ["rua dos macunis", "macunis"], numeros: ["441"], bairros: ["pinheiros"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
+      palavras_chave: ["rua dos macunis", "macunis", "441", "pinheiros"] },
+    { id: 21, nome: "Avenida Pedroso de Moraes, 1619", nome_curto: "Pedroso de Moraes", distrito: "Pinheiros", lat: -23.565800, lng: -46.696200, tipo: "Parada Convencional",
+      apelidos: [], ruas: ["avenida pedroso de moraes", "pedroso de moraes", "pedroso"], numeros: ["1619"], bairros: ["pinheiros"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
+      palavras_chave: ["avenida pedroso de moraes", "pedroso de moraes", "pedroso", "1619", "pinheiros"] },
+    { id: 22, nome: "Avenida Brigadeiro Faria Lima, 398", nome_curto: "Faria Lima, 398", distrito: "Pinheiros", lat: -23.566800, lng: -46.695300, tipo: "Parada Convencional",
+      apelidos: [], ruas: ["avenida brigadeiro faria lima", "av brigadeiro faria lima", "brigadeiro faria lima", "av faria lima", "faria lima"], numeros: ["398"], bairros: ["pinheiros"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
+      palavras_chave: ["avenida brigadeiro faria lima", "av brigadeiro faria lima", "brigadeiro faria lima", "av faria lima", "faria lima", "398", "pinheiros"] },
+    { id: 23, nome: "Avenida Brigadeiro Faria Lima, 682 — Largo da Batata / Metrô Faria Lima", nome_curto: "Metrô Faria Lima", distrito: "Pinheiros", lat: -23.567300, lng: -46.694800, tipo: "Conexão Metrô (Linha 4-Amarela)",
+      apelidos: ["largo da batata", "batata"], ruas: ["avenida brigadeiro faria lima", "av brigadeiro faria lima", "brigadeiro faria lima", "av faria lima", "faria lima"], numeros: ["682"], bairros: ["pinheiros"], metros: ["metro faria lima", "estacao faria lima", "linha 4 amarela", "linha amarela"], faculdades: [], hospitais: [], pontos_turisticos: ["largo da batata"],
+      palavras_chave: ["largo da batata", "batata", "metro faria lima", "estacao faria lima", "linha 4 amarela", "linha amarela", "avenida brigadeiro faria lima", "av brigadeiro faria lima", "brigadeiro faria lima", "av faria lima", "faria lima", "682", "pinheiros"] },
+    { id: 24, nome: "Avenida Brigadeiro Faria Lima, 1384", nome_curto: "Faria Lima, 1384", distrito: "Pinheiros", lat: -23.573100, lng: -46.689600, tipo: "Eixo Corporativo",
+      apelidos: [], ruas: ["avenida brigadeiro faria lima", "av brigadeiro faria lima", "brigadeiro faria lima", "av faria lima", "faria lima"], numeros: ["1384"], bairros: ["pinheiros"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
+      palavras_chave: ["avenida brigadeiro faria lima", "av brigadeiro faria lima", "brigadeiro faria lima", "av faria lima", "faria lima", "1384", "pinheiros"] },
+    { id: 25, nome: "Avenida Brigadeiro Faria Lima, 1828", nome_curto: "Faria Lima, 1828", distrito: "Pinheiros", lat: -23.576800, lng: -46.686500, tipo: "Eixo Corporativo",
+      apelidos: [], ruas: ["avenida brigadeiro faria lima", "av brigadeiro faria lima", "brigadeiro faria lima", "av faria lima", "faria lima"], numeros: ["1828"], bairros: ["pinheiros"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
+      palavras_chave: ["avenida brigadeiro faria lima", "av brigadeiro faria lima", "brigadeiro faria lima", "av faria lima", "faria lima", "1828", "pinheiros"] },
+    { id: 26, nome: "Avenida Brigadeiro Faria Lima, 2528", nome_curto: "Faria Lima, 2528", distrito: "Jardim Paulistano", lat: -23.582400, lng: -46.682300, tipo: "Eixo Corporativo",
+      apelidos: [], ruas: ["avenida brigadeiro faria lima", "av brigadeiro faria lima", "brigadeiro faria lima", "av faria lima", "faria lima"], numeros: ["2528"], bairros: ["jardim paulistano"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
+      palavras_chave: ["avenida brigadeiro faria lima", "av brigadeiro faria lima", "brigadeiro faria lima", "av faria lima", "faria lima", "2528", "jardim paulistano"] },
+    { id: 27, nome: "Avenida Brigadeiro Faria Lima, 3066", nome_curto: "Faria Lima, 3066", distrito: "Itaim Bibi", lat: -23.586700, lng: -46.679100, tipo: "Eixo Corporativo",
+      apelidos: [], ruas: ["avenida brigadeiro faria lima", "av brigadeiro faria lima", "brigadeiro faria lima", "av faria lima", "faria lima"], numeros: ["3066"], bairros: ["itaim bibi", "itaim"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
+      palavras_chave: ["avenida brigadeiro faria lima", "av brigadeiro faria lima", "brigadeiro faria lima", "av faria lima", "faria lima", "3066", "itaim bibi", "itaim"] },
+    { id: 28, nome: "Rua Aspásia", nome_curto: "Rua Aspásia", distrito: "Itaim Bibi", lat: -23.588100, lng: -46.677500, tipo: "Parada Convencional",
+      apelidos: [], ruas: ["rua aspasia", "aspasia"], numeros: [], bairros: ["itaim bibi", "itaim"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
+      palavras_chave: ["rua aspasia", "aspasia", "itaim bibi", "itaim"] },
+    { id: 29, nome: "Rua Tabapuã, 1007", nome_curto: "Tabapuã, 1007", distrito: "Itaim Bibi", lat: -23.586200, lng: -46.675100, tipo: "Parada Convencional",
+      apelidos: [], ruas: ["rua tabapua", "tabapua"], numeros: ["1007"], bairros: ["itaim bibi", "itaim"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
+      palavras_chave: ["rua tabapua", "tabapua", "1007", "itaim bibi", "itaim"] },
+    { id: 30, nome: "Rua Tabapuã, 865", nome_curto: "Tabapuã, 865", distrito: "Itaim Bibi", lat: -23.585100, lng: -46.673400, tipo: "Parada Convencional",
+      apelidos: [], ruas: ["rua tabapua", "tabapua"], numeros: ["865"], bairros: ["itaim bibi", "itaim"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
+      palavras_chave: ["rua tabapua", "tabapua", "865", "itaim bibi", "itaim"] },
+    { id: 31, nome: "Rua Tabapuã, 587", nome_curto: "Tabapuã, 587", distrito: "Itaim Bibi", lat: -23.583900, lng: -46.670800, tipo: "Parada Convencional",
+      apelidos: [], ruas: ["rua tabapua", "tabapua"], numeros: ["587"], bairros: ["itaim bibi", "itaim"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
+      palavras_chave: ["rua tabapua", "tabapua", "587", "itaim bibi", "itaim"] },
+    { id: 32, nome: "Rua Doutor Renato Paes de Barros, 550", nome_curto: "Renato Paes de Barros", distrito: "Itaim Bibi", lat: -23.585300, lng: -46.668500, tipo: "Parada Convencional",
+      apelidos: [], ruas: ["rua doutor renato paes de barros", "renato paes de barros", "paes de barros"], numeros: ["550"], bairros: ["itaim bibi", "itaim"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
+      palavras_chave: ["rua doutor renato paes de barros", "renato paes de barros", "paes de barros", "550", "itaim bibi", "itaim"] },
+    { id: 33, nome: "Avenida Presidente Juscelino Kubitschek, 627", nome_curto: "JK, 627", distrito: "Itaim Bibi", lat: -23.588200, lng: -46.671200, tipo: "Eixo Corporativo",
+      apelidos: ["jk"], ruas: ["avenida presidente juscelino kubitschek", "presidente juscelino kubitschek", "juscelino kubitschek", "av jk"], numeros: ["627"], bairros: ["itaim bibi", "itaim"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
+      palavras_chave: ["jk", "avenida presidente juscelino kubitschek", "presidente juscelino kubitschek", "juscelino kubitschek", "av jk", "627", "itaim bibi", "itaim"] },
+    { id: 34, nome: "Rua Afonso Braz, 876", nome_curto: "Afonso Braz, 876", distrito: "Vila Nova Conceição", lat: -23.593100, lng: -46.668900, tipo: "Parada Convencional",
+      apelidos: [], ruas: ["rua afonso braz", "afonso braz"], numeros: ["876"], bairros: ["vila nova conceicao"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
+      palavras_chave: ["rua afonso braz", "afonso braz", "876", "vila nova conceicao"] },
+    { id: 35, nome: "Rua Afonso Braz, 707", nome_curto: "Afonso Braz, 707", distrito: "Vila Nova Conceição", lat: -23.594700, lng: -46.667200, tipo: "Parada Convencional",
+      apelidos: [], ruas: ["rua afonso braz", "afonso braz"], numeros: ["707"], bairros: ["vila nova conceicao"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
+      palavras_chave: ["rua afonso braz", "afonso braz", "707", "vila nova conceicao"] },
+    { id: 36, nome: "Rua Haberbeck Brandão, 104", nome_curto: "Haberbeck Brandão", distrito: "Vila Nova Conceição", lat: -23.598200, lng: -46.663100, tipo: "Parada Convencional",
+      apelidos: [], ruas: ["rua haberbeck brandao", "haberbeck brandao", "haberbeck"], numeros: ["104"], bairros: ["vila nova conceicao"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
+      palavras_chave: ["rua haberbeck brandao", "haberbeck brandao", "haberbeck", "104", "vila nova conceicao"] },
+    { id: 37, nome: "Alameda dos Maracatins, 280", nome_curto: "Maracatins", distrito: "Moema", lat: -23.599800, lng: -46.661200, tipo: "Parada Convencional",
+      apelidos: [], ruas: ["alameda dos maracatins", "maracatins"], numeros: ["280"], bairros: ["moema"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
+      palavras_chave: ["alameda dos maracatins", "maracatins", "280", "moema"] },
+    { id: 38, nome: "Avenida Moema, 137", nome_curto: "Avenida Moema", distrito: "Moema", lat: -23.601500, lng: -46.659100, tipo: "Parada Convencional",
+      apelidos: [], ruas: ["avenida moema"], numeros: ["137"], bairros: ["moema"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
+      palavras_chave: ["avenida moema", "137", "moema"] },
+    { id: 39, nome: "Avenida Professor Ascendino Reis, 830", nome_curto: "Ascendino Reis, 830", distrito: "Vila Clementino", lat: -23.596800, lng: -46.654200, tipo: "Parada Convencional",
+      apelidos: [], ruas: ["avenida professor ascendino reis", "professor ascendino reis", "ascendino reis", "ascendino"], numeros: ["830"], bairros: ["vila clementino"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
+      palavras_chave: ["avenida professor ascendino reis", "professor ascendino reis", "ascendino reis", "ascendino", "830", "vila clementino"] },
+    { id: 40, nome: "Avenida Professor Ascendino Reis, 1245", nome_curto: "Ascendino Reis, 1245", distrito: "Vila Clementino", lat: -23.597900, lng: -46.652100, tipo: "Parada Convencional",
+      apelidos: [], ruas: ["avenida professor ascendino reis", "professor ascendino reis", "ascendino reis", "ascendino"], numeros: ["1245"], bairros: ["vila clementino"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
+      palavras_chave: ["avenida professor ascendino reis", "professor ascendino reis", "ascendino reis", "ascendino", "1245", "vila clementino"] },
+    { id: 41, nome: "Avenida Professor Ascendino Reis, 2524 — Estação AACD-Servidor", nome_curto: "Estação AACD", distrito: "Vila Clementino", lat: -23.598800, lng: -46.649800, tipo: "Conexão Metrô (Linha 5-Lilás)",
+      apelidos: [], ruas: ["avenida professor ascendino reis", "professor ascendino reis", "ascendino reis", "ascendino"], numeros: ["2524"], bairros: ["vila clementino"], metros: ["estacao aacd servidor", "estacao aacd", "aacd servidor", "metro aacd", "linha 5 lilas", "linha lilas"], faculdades: [], hospitais: ["aacd", "hospital aacd"], pontos_turisticos: [],
+      palavras_chave: ["estacao aacd servidor", "estacao aacd", "aacd servidor", "metro aacd", "linha 5 lilas", "linha lilas", "aacd", "hospital aacd", "avenida professor ascendino reis", "professor ascendino reis", "ascendino reis", "ascendino", "2524", "vila clementino"] },
+    { id: 42, nome: "Rua Borges Lagoa, 1395", nome_curto: "Borges Lagoa, 1395", distrito: "Vila Clementino", lat: -23.598100, lng: -46.648600, tipo: "Parada Convencional",
+      apelidos: [], ruas: ["rua borges lagoa", "borges lagoa"], numeros: ["1395"], bairros: ["vila clementino"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
+      palavras_chave: ["rua borges lagoa", "borges lagoa", "1395", "vila clementino"] },
+    { id: 43, nome: "Rua Borges Lagoa, 895 — Hospital São Paulo / UNIFESP", nome_curto: "Hospital São Paulo", distrito: "Vila Clementino", lat: -23.597600, lng: -46.647100, tipo: "Polo Universitário e de Saúde",
+      apelidos: ["hospital sp"], ruas: ["rua borges lagoa", "borges lagoa"], numeros: ["895"], bairros: ["vila clementino"], metros: [], faculdades: ["unifesp", "universidade federal de sao paulo", "escola paulista de medicina"], hospitais: ["hospital sao paulo", "hospital universitario", "hospital"], pontos_turisticos: [],
+      palavras_chave: ["hospital sp", "unifesp", "universidade federal de sao paulo", "escola paulista de medicina", "hospital sao paulo", "hospital universitario", "hospital", "rua borges lagoa", "borges lagoa", "895", "vila clementino"] },
+    { id: 44, nome: "Rua Borges Lagoa, 565", nome_curto: "Borges Lagoa, 565", distrito: "Vila Clementino", lat: -23.598900, lng: -46.642500, tipo: "Parada Convencional",
+      apelidos: [], ruas: ["rua borges lagoa", "borges lagoa"], numeros: ["565"], bairros: ["vila clementino"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
+      palavras_chave: ["rua borges lagoa", "borges lagoa", "565", "vila clementino"] },
+    { id: 45, nome: "Rua Machado Bittencourt B/C", nome_curto: "Machado Bittencourt", distrito: "Vila Mariana", lat: -23.599700, lng: -46.638200, tipo: "Parada Convencional",
+      apelidos: [], ruas: ["rua machado bittencourt", "machado bittencourt"], numeros: [], bairros: ["vila mariana"], metros: [], faculdades: [], hospitais: [], pontos_turisticos: [],
+      palavras_chave: ["rua machado bittencourt", "machado bittencourt", "vila mariana"] },
+    { id: 46, nome: "Terminal Metrô Santa Cruz — Ponto Final", nome_curto: "Metrô Santa Cruz", distrito: "Vila Mariana", lat: -23.600100, lng: -46.636800, tipo: "Conexão Metrô (Linhas 1-Azul e 5-Lilás)",
+      apelidos: ["ponto final", "fim da linha", "final da linha", "ultima parada"], ruas: [], numeros: [], bairros: ["vila mariana"], metros: ["metro santa cruz", "estacao santa cruz", "santa cruz", "linha 1 azul", "linha azul", "linha 5 lilas", "linha lilas"], faculdades: [], hospitais: [], pontos_turisticos: ["terminal santa cruz"],
+      palavras_chave: ["ponto final", "fim da linha", "final da linha", "ultima parada", "metro santa cruz", "estacao santa cruz", "santa cruz", "linha 1 azul", "linha azul", "linha 5 lilas", "linha lilas", "terminal santa cruz", "vila mariana"] }
+  ]
+};
+
+/* ---------- reconhecimento: pesos por tipo de referência ---------- */
+const _PESOS = { apelidos: 100, metros: 90, pontos_turisticos: 90, faculdades: 85, hospitais: 85, ruas: 80, numeros: 60, bairros: 40 };
+const _PARCIAL = 30;
+const _PALAVRAS_VAZIAS = new Set(['eu', 'quero', 'ir', 'para', 'pra', 'o', 'a', 'os', 'as', 'um', 'uma', 'de', 'da', 'do', 'das', 'dos', 'em', 'na', 'no', 'nas', 'nos',
+  'ate', 'vou', 'me', 'leva', 'levar', 'voce', 'favor', 'estou', 'estamos', 'agora', 'aqui', 'onde', 'qual', 'e', 'que', 'quer', 'gostaria', 'queria', 'preciso', 'fica', 'tou', 'to']);
+const _FRASES_VAGAS = /\b(perto d[oae]s?|ao lado d[oae]s?|em frente (?:a[o]?s?|d[oae]s?)|proximo (?:a[o]?s?|d[oae]s?)|junto (?:a[o]?s?|d[oae]s?))\b/g;
+
+function normalizar(texto) {
+  return String(texto == null ? "" : texto).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+}
+/* Normaliza a fala: minúsculas, sem acento, sem pontuação, sem "perto do / ao lado do…" e sem palavras vazias. */
+function _limpar(texto) {
+  const t = normalizar(texto).replace(/[^a-z0-9 ]+/g, " ").replace(_FRASES_VAGAS, " ");
+  return t.split(/\s+/).filter(w => w && !_PALAVRAS_VAZIAS.has(w));
+}
+function _lev1(a, b) { /* distância de edição ≤ 1 */
+  if (a === b) return true; if (Math.abs(a.length - b.length) > 1) return false;
+  let i = 0, j = 0, d = 0;
+  while (i < a.length && j < b.length) {
+    if (a[i] === b[j]) { i++; j++; continue; }
+    if (++d > 1) return false;
+    if (a.length > b.length) i++; else if (a.length < b.length) j++; else { i++; j++; }
+  }
+  return d + (a.length - i) + (b.length - j) <= 1;
+}
+function _pontuar(parada, palavras, junto) {
+  let total = 0; const acertos = [];
+  for (const cat in _PESOS) {
+    let achou = false;
+    for (const kw of (parada[cat] || [])) {
+      const k = _limpar(kw).join(" ");
+      if (k && (" " + junto + " ").indexOf(" " + k + " ") >= 0) { achou = true; break; }
+    }
+    if (achou) { total += _PESOS[cat]; acertos.push(cat); }
+  }
+  if (total === 0) { /* correspondência parcial: uma palavra importante parecida */
+    const kws = new Set(); (parada.palavras_chave || []).forEach(k => _limpar(k).forEach(w => { if (w.length >= 5 && !/^\d+$/.test(w)) kws.add(w); }));
+    for (const w of palavras) { if (w.length < 5 || /^\d+$/.test(w)) continue;
+      for (const k of kws) { if (k === w || (w.length >= 6 && k.length >= 6 && _lev1(k, w))) return { pontuacao: _PARCIAL, acertos: ["parcial"] }; } }
+  }
+  return { pontuacao: total, acertos };
+}
+function _classificar(texto) {
+  const palavras = _limpar(texto), junto = palavras.join(" ");
+  if (!junto) return [];
+  const lista = [];
+  for (const parada of LINHA_875C10.paradas) { const r = _pontuar(parada, palavras, junto); if (r.pontuacao > 0) lista.push({ parada, pontuacao: r.pontuacao, acertos: r.acertos }); }
+  return lista.sort((a, b) => b.pontuacao - a.pontuacao || a.parada.id - b.parada.id);
+}
+function _porId(texto) {
+  const n = normalizar(texto).replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
+  const m = n.match(/\bparada (?:numero )?(\d{1,2})\b/) || n.match(/^(\d{1,2})$/);
+  if (m) { const id = +m[1]; return LINHA_875C10.paradas.find(p => p.id === id) || null; }
+  return null;
+}
+
+/* ---------- funções do arquivo mestre ---------- */
+/** Melhor parada para o que foi falado (ou null). */
+function buscarParada(textoFalado) {
+  const id = _porId(textoFalado); if (id) return id;
+  const l = _classificar(textoFalado); return l.length ? l[0].parada : null;
+}
+/** Todas as paradas que combinam, da mais para a menos provável. */
+function buscarParadasMultiplas(textoFalado) {
+  return _classificar(textoFalado).map(x => ({ parada: x.parada, pontuacao: x.pontuacao }));
+}
+/**
+ * Decide o que o Guia deve fazer com o que foi falado:
+ *  - direta    pontuação > 70 e uma só parada no topo
+ *  - confirmar pontuação de 40 a 70: "Você quis dizer …?"
+ *  - ambigua   várias paradas empatadas no topo: o Guia pergunta qual
+ *  - nenhuma   pontuação < 40: "Não entendi…"
+ */
+function reconhecerParada(textoFalado) {
+  const id = _porId(textoFalado); if (id) return { tipo: "direta", parada: id, pontuacao: 200 };
+  const lista = _classificar(textoFalado);
+  if (!lista.length || lista[0].pontuacao < 40) return { tipo: "nenhuma", pontuacao: lista.length ? lista[0].pontuacao : 0 };
+  const topo = lista[0].pontuacao, empatadas = lista.filter(x => x.pontuacao === topo).map(x => x.parada);
+  if (empatadas.length > 1) return { tipo: "ambigua", paradas: empatadas, pontuacao: topo };
+  return { tipo: topo > 70 ? "direta" : "confirmar", parada: lista[0].parada, pontuacao: topo };
+}
+/** Resposta a "Você quer a parada A, B ou C?": por nome, número do endereço, número da parada ou ordem ("a segunda"). */
+function escolherEntre(textoFalado, candidatas) {
+  const n = normalizar(textoFalado).replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
+  const ORD = [["ultim", -1], ["primeir", 0], ["segund", 1], ["terceir", 2], ["quart", 3], ["quint", 4], ["sext", 5], ["setim", 6], ["oitav", 7]];
+  for (const [p, i] of ORD) { if (new RegExp("\\b" + p + "[ao]\\b").test(n)) { const k = i < 0 ? candidatas.length - 1 : i; if (candidatas[k]) return candidatas[k]; } }
+  const nums = n.match(/\b\d{1,4}\b/g) || [];
+  for (const x of nums) {
+    const porEnd = candidatas.filter(c => (c.numeros || []).indexOf(x) >= 0); if (porEnd.length === 1) return porEnd[0];
+    if (+x <= 46) { const porId = candidatas.filter(c => c.id === +x); if (porId.length === 1) return porId[0]; }
+  }
+  const palavras = _limpar(textoFalado), junto = palavras.join(" ");
+  const pont = candidatas.map(parada => ({ parada, p: _pontuar(parada, palavras, junto).pontuacao })).filter(x => x.p >= _PARCIAL).sort((a, b) => b.p - a.p);
+  if (pont.length && (pont.length === 1 || pont[0].p > pont[1].p)) return pont[0].parada;
+  return null;
+}
+/** Paradas do trajeto, na ordem exata de viagem. A linha só anda do Terminal Lapa ao Metrô Santa Cruz: sentido contrário devolve []. */
+function calcularTrajeto(idOrigem, idDestino) {
+  if (idOrigem >= idDestino) return [];
+  return LINHA_875C10.paradas.filter(p => p.id >= idOrigem && p.id <= idDestino);
+}
+function proximaParada(idAtual) { return LINHA_875C10.paradas.find(p => p.id === idAtual + 1) || null; }
+function paradaAnterior(idAtual) { return LINHA_875C10.paradas.find(p => p.id === idAtual - 1) || null; }
+function quantasFaltam(idAtual, idDestino) { return Math.abs(idDestino - idAtual); }
+function listarParadas() { return LINHA_875C10.paradas; }
+/** Autoverificação da ordem: ids 1..46 em sequência, sem repetição, com coordenadas. Devolve a lista de problemas (vazia = ok). */
+function validarLinha() {
+  const erros = [], ps = LINHA_875C10.paradas;
+  if (ps.length !== 46) erros.push("esperadas 46 paradas, há " + ps.length);
+  ps.forEach((p, i) => {
+    if (p.id !== i + 1) erros.push("ordem quebrada na posição " + (i + 1) + " (id " + p.id + ")");
+    if (typeof p.lat !== "number" || typeof p.lng !== "number") erros.push("sem coordenadas: " + p.id);
+    if (!p.nome || !p.nome_curto) erros.push("sem nome: " + p.id);
+  });
+  return erros;
+}
+
+if (typeof module !== "undefined") {
+  module.exports = { LINHA_875C10, normalizar, buscarParada, buscarParadasMultiplas, reconhecerParada, escolherEntre, calcularTrajeto, proximaParada, paradaAnterior, quantasFaltam, listarParadas, validarLinha };
+}
+
+</script>
+<script>
 'use strict';
 /* GuIa — interação 100% por voz. Sem botões, sem campos, sem links. A tela só espelha o que o Guia fala (aria-hidden: leitores de tela não duplicam a voz). */
-const STOPS = [{"id":1,"distrito":"Lapa","nome":"Terminal Lapa — Plataforma Interna Linha 875C-10","lat":-23.5186,"lng":-46.6974,"tipo":"Terminal de Origem"},{"id":2,"distrito":"Lapa","nome":"Rua Roma, 636","lat":-23.5221,"lng":-46.6961,"tipo":"Parada Convencional"},{"id":3,"distrito":"Lapa","nome":"Rua Nossa Senhora da Lapa, 49","lat":-23.5235,"lng":-46.6978,"tipo":"Parada Convencional"},{"id":4,"distrito":"Lapa","nome":"Rua Pio XI, 80","lat":-23.5252,"lng":-46.7011,"tipo":"Parada Convencional"},{"id":5,"distrito":"Alto da Lapa","nome":"Rua Pio XI, 698","lat":-23.5298,"lng":-46.7058,"tipo":"Parada Convencional"},{"id":6,"distrito":"Alto da Lapa","nome":"Praça Oswaldo Zanini","lat":-23.5332,"lng":-46.7089,"tipo":"Parada Convencional"},{"id":7,"distrito":"Alto da Lapa","nome":"Rua Doutor José Elias, 227","lat":-23.5358,"lng":-46.7114,"tipo":"Parada Convencional"},{"id":8,"distrito":"Alto da Lapa","nome":"Rua Doutor José Elias, 302","lat":-23.5372,"lng":-46.7126,"tipo":"Parada Convencional"},{"id":9,"distrito":"Alto da Lapa","nome":"Rua Barbalha, 355","lat":-23.5395,"lng":-46.7142,"tipo":"Parada Convencional"},{"id":10,"distrito":"Alto da Lapa","nome":"Rua Barbalha, 95","lat":-23.5413,"lng":-46.7153,"tipo":"Parada Convencional"},{"id":11,"distrito":"Alto de Pinheiros","nome":"Avenida Diógenes Ribeiro de Lima, 2345","lat":-23.5435,"lng":-46.7161,"tipo":"Parada Convencional"},{"id":12,"distrito":"Alto de Pinheiros","nome":"Avenida Diógenes Ribeiro de Lima, 2200","lat":-23.5458,"lng":-46.7148,"tipo":"Parada Convencional"},{"id":13,"distrito":"Alto de Pinheiros","nome":"Avenida Diógenes Ribeiro de Lima, 1900","lat":-23.5482,"lng":-46.7132,"tipo":"Parada Convencional"},{"id":14,"distrito":"Alto de Pinheiros","nome":"Avenida Diógenes Ribeiro de Lima, 1768","lat":-23.5501,"lng":-46.7115,"tipo":"Parada Convencional"},{"id":15,"distrito":"Alto de Pinheiros","nome":"Avenida Diógenes Ribeiro de Lima, 1321","lat":-23.5534,"lng":-46.7083,"tipo":"Parada Convencional"},{"id":16,"distrito":"Alto de Pinheiros","nome":"Avenida Diógenes Ribeiro de Lima, 1045","lat":-23.5562,"lng":-46.7061,"tipo":"Parada Convencional"},{"id":17,"distrito":"Alto de Pinheiros","nome":"Avenida Diógenes Ribeiro de Lima, 649","lat":-23.5594,"lng":-46.7034,"tipo":"Parada Convencional"},{"id":18,"distrito":"Alto de Pinheiros","nome":"Avenida Diógenes Ribeiro de Lima (Praça Pôr do Sol)","lat":-23.5612,"lng":-46.7018,"tipo":"Ponto de Interesse"},{"id":19,"distrito":"Alto de Pinheiros","nome":"Praça Cecília Perigo Saldiva","lat":-23.5629,"lng":-46.6998,"tipo":"Parada Convencional"},{"id":20,"distrito":"Pinheiros","nome":"Rua dos Macunis, 441","lat":-23.5645,"lng":-46.6979,"tipo":"Parada Convencional"},{"id":21,"distrito":"Pinheiros","nome":"Avenida Pedroso de Moraes, 1619","lat":-23.5658,"lng":-46.6962,"tipo":"Parada Convencional"},{"id":22,"distrito":"Pinheiros","nome":"Avenida Brigadeiro Faria Lima, 398","lat":-23.5668,"lng":-46.6953,"tipo":"Parada Convencional"},{"id":23,"distrito":"Pinheiros","nome":"Avenida Brigadeiro Faria Lima, 682 — Largo da Batata / Metrô Faria Lima","lat":-23.5673,"lng":-46.6948,"tipo":"Conexão Metrô (Linha 4-Amarela)"},{"id":24,"distrito":"Pinheiros","nome":"Avenida Brigadeiro Faria Lima, 1384","lat":-23.5731,"lng":-46.6896,"tipo":"Eixo Corporativo"},{"id":25,"distrito":"Pinheiros","nome":"Avenida Brigadeiro Faria Lima, 1828","lat":-23.5768,"lng":-46.6865,"tipo":"Eixo Corporativo"},{"id":26,"distrito":"Jardim Paulistano","nome":"Avenida Brigadeiro Faria Lima, 2528","lat":-23.5824,"lng":-46.6823,"tipo":"Eixo Corporativo"},{"id":27,"distrito":"Itaim Bibi","nome":"Avenida Brigadeiro Faria Lima, 3066","lat":-23.5867,"lng":-46.6791,"tipo":"Eixo Corporativo"},{"id":28,"distrito":"Itaim Bibi","nome":"Rua Aspásia","lat":-23.5881,"lng":-46.6775,"tipo":"Parada Convencional"},{"id":29,"distrito":"Itaim Bibi","nome":"Rua Tabapuã, 1007","lat":-23.5862,"lng":-46.6751,"tipo":"Parada Convencional"},{"id":30,"distrito":"Itaim Bibi","nome":"Rua Tabapuã, 865","lat":-23.5851,"lng":-46.6734,"tipo":"Parada Convencional"},{"id":31,"distrito":"Itaim Bibi","nome":"Rua Tabapuã, 587","lat":-23.5839,"lng":-46.6708,"tipo":"Parada Convencional"},{"id":32,"distrito":"Itaim Bibi","nome":"Rua Doutor Renato Paes de Barros, 550","lat":-23.5853,"lng":-46.6685,"tipo":"Parada Convencional"},{"id":33,"distrito":"Itaim Bibi","nome":"Avenida Presidente Juscelino Kubitschek, 627","lat":-23.5882,"lng":-46.6712,"tipo":"Eixo Corporativo"},{"id":34,"distrito":"Vila Nova Conceição","nome":"Rua Afonso Braz, 876","lat":-23.5931,"lng":-46.6689,"tipo":"Parada Convencional"},{"id":35,"distrito":"Vila Nova Conceição","nome":"Rua Afonso Braz, 707","lat":-23.5947,"lng":-46.6672,"tipo":"Parada Convencional"},{"id":36,"distrito":"Vila Nova Conceição","nome":"Rua Haberbeck Brandão, 104","lat":-23.5982,"lng":-46.6631,"tipo":"Parada Convencional"},{"id":37,"distrito":"Moema","nome":"Alameda dos Maracatins, 280","lat":-23.5998,"lng":-46.6612,"tipo":"Parada Convencional"},{"id":38,"distrito":"Moema","nome":"Avenida Moema, 137","lat":-23.6015,"lng":-46.6591,"tipo":"Parada Convencional"},{"id":39,"distrito":"Vila Clementino","nome":"Avenida Professor Ascendino Reis, 830","lat":-23.5968,"lng":-46.6542,"tipo":"Parada Convencional"},{"id":40,"distrito":"Vila Clementino","nome":"Avenida Professor Ascendino Reis, 1245","lat":-23.5979,"lng":-46.6521,"tipo":"Parada Convencional"},{"id":41,"distrito":"Vila Clementino","nome":"Avenida Professor Ascendino Reis, 2524 — Estação AACD-Servidor","lat":-23.5988,"lng":-46.6498,"tipo":"Conexão Metrô (Linha 5-Lilás)"},{"id":42,"distrito":"Vila Clementino","nome":"Rua Borges Lagoa, 1395","lat":-23.5981,"lng":-46.6486,"tipo":"Parada Convencional"},{"id":43,"distrito":"Vila Clementino","nome":"Rua Borges Lagoa, 895 — Hospital São Paulo / UNIFESP","lat":-23.5976,"lng":-46.6471,"tipo":"Polo Universitário e de Saúde"},{"id":44,"distrito":"Vila Clementino","nome":"Rua Borges Lagoa, 565","lat":-23.5989,"lng":-46.6425,"tipo":"Parada Convencional"},{"id":45,"distrito":"Vila Mariana","nome":"Rua Machado Bittencourt B/C","lat":-23.5997,"lng":-46.6382,"tipo":"Parada Convencional"},{"id":46,"distrito":"Vila Mariana","nome":"Terminal Metrô Santa Cruz — Ponto Final","lat":-23.6001,"lng":-46.6368,"tipo":"Conexão Metrô (Linhas 1-Azul e 5-Lilás)"}];
-const LINE = { linha: '875C-10', origem: 'Terminal Lapa', destino: 'Metrô Santa Cruz', km: 24.5, tempo: '1h15 a 1h30' };
-const SHORT = { 1: 'Terminal Lapa', 18: 'Praça Pôr do Sol', 23: 'Metrô Faria Lima', 41: 'Estação AACD-Servidor', 43: 'Hospital São Paulo', 46: 'Metrô Santa Cruz' };
-const nm = s => SHORT[s.id] || s.nome;
+/* A ordem e os dados das 46 paradas vêm do arquivo mestre linha875c10.js */
+const STOPS = LINHA_875C10.paradas;
+const nm = s => s.nome_curto;
 const $ = id => document.getElementById(id);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const norm = t => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
@@ -188,12 +463,12 @@ function show(name, d) {
   } else if (name === 'listen') {
     h = simNote() + '<div class="top">' + LOGO + '' + pillHTML() + '</div>' +
       '<p class="sub strong c" data-cap style="margin-top:6px">' + esc(S.cap || '') + '</p><p class="quote" data-heard>' + (S.heard ? '“' + esc(S.heard) + '”' : '\u00a0') + '</p>' +
-      '<div class="mic" aria-hidden="true">' + ic('mic') + '</div><p class="sub c">Diga o nome ou o número da parada.</p><div class="grow"></div>' +
+      '<div class="mic" aria-hidden="true">' + ic('mic') + '</div><p class="sub c">Diga a rua, o bairro, o metrô ou um ponto de referência.</p><div class="grow"></div>' +
       '<div class="infocard">' + ic('bus') + '<span>Linha piloto 875C-10<br>Terminal Lapa → Santa Cruz</span></div>';
   } else if (name === 'confirm') {
     h = simNote() + '<div class="top">' + LOGO + '' + pillHTML() + '</div><div class="grow"></div><p class="lbl">Você disse:</p><h1 class="h1 big">' + esc(d.dest) + '</h1>' +
       '<div class="row">' + ic('bus') + '<span>Linha 875C-10, saindo de ' + esc(d.from) + '</span></div><div class="row">' + ic('clock') + '<span>Cerca de ' + d.mins + ' minutos (estimativa)</span></div>' +
-      '<div class="grow"></div><div class="acts"><div class="btn">' + ic('check') + 'Diga: confirmar</div><div class="btn o">' + ic('pencil') + 'Diga: corrigir</div></div>';
+      '<div class="grow"></div><div class="acts"><div class="btn">' + ic('check') + 'Diga: sim, confirmar</div><div class="btn o">' + ic('pencil') + 'Diga: não, corrigir</div></div>';
   } else if (name === 'route') {
     const n = S.nav, s = STOPS[n.idx], l = n.dest.id - s.id, mins = Math.max(1, Math.round(l * 1.83));
     const items = [];
@@ -426,37 +701,26 @@ async function register() {
   await speak('Seu cadastro foi concluído com sucesso. Agora podemos começar.');
 }
 
-/* ---------- paradas: reconhecimento de nomes e números ---------- */
-const ALIAS = [[/\bterminal lapa\b/, [1]], [/\bpor do sol\b/, [18]], [/\b(metro faria lima|estacao faria lima|largo da batata|batata)\b/, [23]], [/\bsanta cruz\b/, [46]], [/\b(hospital|unifesp)\b/, [43]], [/\baacd\b/, [41]]];
-const STOPW = ['rua', 'avenida', 'av', 'de', 'da', 'do', 'dos', 'das', 'parada', 'estou', 'estamos', 'na', 'no', 'em', 'quero', 'ir', 'para', 'pra', 'o', 'a', 'e', 'to', 'tou', 'minha', 'localizacao', 'esta', 'agora', 'perto', 'ponto', 'onibus', 'vou', 'destino', 'ate'];
-const tk = s => norm(s).split(' ').filter(t => t && STOPW.indexOf(t) < 0);
-function findStops(n) {
-  const m = n.match(/\b(?:parada |numero )?(\d{1,2})\b/);
-  if (m && +m[1] >= 1 && +m[1] <= 46 && (/parada|numero/.test(n) || /^\d{1,2}$/.test(n))) return [STOPS[+m[1] - 1]];
-  for (const [re, ids] of ALIAS) if (re.test(n)) return ids.map(i => STOPS[i - 1]);
-  const q = tk(n); if (!q.length) return [];
-  let best = [], bs = 0;
-  STOPS.forEach(s => { const st = tk(s.nome + ' ' + s.distrito); let hit = 0, strong = false; q.forEach(t => { if (st.indexOf(t) >= 0) { hit++; if (t.length >= 3 && !/^\d+$/.test(t)) strong = true; } }); const sc = hit / q.length; if (!strong || sc < .6) return; if (sc > bs) { bs = sc; best = [s]; } else if (sc === bs) best.push(s); });
-  return best;
-}
-const EXAMPLES = 'Tente, por exemplo: Terminal Lapa, Rua Roma, Praça Pôr do Sol, Metrô Faria Lima, Hospital São Paulo ou Metrô Santa Cruz.';
-function stopParser(label, o) {
-  return (n) => {
-    const ms = findStops(n);
-    if (ms.length === 1) return ms[0];
-    if (ms.length > 5) return { retry: 'Encontrei várias paradas com esse nome. Diga o endereço completo ou o número da parada. ' + label };
-    if (ms.length > 1) return { multi: ms };
-    return { retry: 'Não encontrei essa parada na linha 875C-10. ' + EXAMPLES + ' ' + label };
-  };
-}
+/* ---------- paradas: reconhecimento inteligente (módulo do arquivo mestre linha875c10.js) ---------- */
+const NAO_ENTENDI = 'Não entendi. Você pode falar a rua, o bairro, um metrô próximo ou um ponto de referência?';
+const listaFalada = ps => ps.length < 2 ? ps.map(nm).join('') : ps.slice(0, -1).map(nm).join(', ') + ' ou ' + nm(ps[ps.length - 1]);
+/** Pergunta uma parada e resolve tudo por voz: entende apelido, rua, número, bairro, metrô, hospital…; confirma quando em dúvida; pergunta qual quando há várias. */
 async function askStop(prompt, label, view) {
-  const parse = stopParser(label);
-  let v = await ask(prompt, n => { const r = parse(n); return r && r.multi ? r : r; }, { again: label, view: view || 'listen' });
-  while (v && v.multi) {
-    const opts = v.multi.slice(0, 4);
-    v = await ask('Encontrei ' + opts.length + ' opções: ' + opts.map(s => 'parada ' + s.id + ', ' + nm(s)).join('; ') + '. Diga o número da parada.', n => { const x = findStops(n).filter(s => opts.indexOf(s) >= 0); return x.length === 1 ? x[0] : undefined; }, { again: 'Diga o número da parada.' });
+  const parse = (n, raw) => { const x = reconhecerParada(raw || n); return x.tipo === 'nenhuma' ? { retry: NAO_ENTENDI } : x; };
+  let r = await ask(prompt, parse, { again: label, view: view || 'listen' });
+  for (;;) {
+    if (r.tipo === 'direta') return r.parada;
+    if (r.tipo === 'confirmar') {
+      const yes = await ask('Você quis dizer ' + nm(r.parada) + '? Diga sim ou não.', yn, { noGlobal: true });
+      if (yes) return r.parada;
+      r = await ask(label, parse, { again: label, view: view || 'listen' }); continue;
+    }
+    if (r.tipo === 'ambigua') {
+      const lista = r.paradas;
+      return await ask('Encontrei várias paradas. Você quer a parada ' + listaFalada(lista) + '?', (n, raw) => escolherEntre(raw || n, lista) || undefined, { again: 'Diga o nome, o número do endereço ou o número da parada.', noGlobal: true });
+    }
+    r = await ask(label, parse, { again: label, view: view || 'listen' });
   }
-  return v;
 }
 
 /* ---------- geometria ---------- */
@@ -491,7 +755,7 @@ async function planTrip(first) {
     if (dest.id <= origin.id) { await speak('Essa parada fica para trás. A linha 875C-10 só vai do Terminal Lapa ao Metrô Santa Cruz. Vamos escolher o destino de novo.'); continue; }
     const mins = Math.max(1, Math.round((dest.id - origin.id) * 1.83));
     S.vdata = { dest: nm(dest), from: nm(origin), mins };
-    const ok = await ask('Entendi: ' + nm(dest) + ', pela linha 875C-10. ' + (walk ? 'O ponto mais próximo é ' + nm(origin) + ', a ' + fmtD(origin.dist) + ' de você. Vou te guiar até lá antes de começar. ' : 'Saindo de ' + nm(origin) + (!S.sim && origin.dist != null ? ', a ' + fmtD(origin.dist) + ' de você' : '') + '. ') + 'Cerca de ' + mins + ' minutos de ônibus, é uma estimativa. Diga confirmar ou corrigir.', n => /\b(corrigir|corrige|errado|nao|voltar)\b/.test(n) ? false : /\b(confirmar|confirmo|confirma|sim|certo|isso|ok|pode)\b/.test(n) ? true : undefined, { view: 'confirm', again: 'Diga confirmar ou corrigir.' });
+    const ok = await ask('Entendi. Você quer ir para ' + nm(dest) + ', pela linha 875C-10. ' + (walk ? 'O ponto mais próximo é ' + nm(origin) + ', a ' + fmtD(origin.dist) + ' de você. Vou te guiar até lá antes de começar. ' : 'Saindo de ' + nm(origin) + (!S.sim && origin.dist != null ? ', a ' + fmtD(origin.dist) + ' de você' : '') + '. ') + 'Cerca de ' + mins + ' minutos de ônibus, é uma estimativa. Está correto? Diga sim ou não.', n => /\b(corrigir|corrige|errado|nao|voltar)\b/.test(n) ? false : /\b(confirmar|confirmo|confirma|sim|certo|isso|ok|pode)\b/.test(n) ? true : undefined, { view: 'confirm', again: 'Está correto? Diga sim ou não.' });
     if (!ok) { prompt = 'Certo. Para onde você quer ir?'; continue; }
     return { origin, dest, walk };
   }
@@ -685,7 +949,7 @@ async function boot() {
 }
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 window.addEventListener('load', () => boot().catch(e => { console.error(e); setCaption('Algo falhou. Recarregue a página.'); }));
-window.Guia = { validTrip, setDial: f => { dialFn = f; }, saudacao, E, S, STOPS, deliver, findStops, store, speak, show, setState };
+window.Guia = { validTrip, setDial: f => { dialFn = f; }, saudacao, E, S, STOPS, deliver, reconhecerParada, store, speak, show, setState };
 </script>
 </body>
 </html>
