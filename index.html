@@ -4,6 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#160a22">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <title>GuIa — guia por voz, linha 875C-10</title>
 <meta name="color-scheme" content="light dark">
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -87,6 +92,17 @@ body[data-s=listening] .mic::after{animation:ring 1.6s ease-out .8s infinite}
 .tone-yellow .big-badge::after{inset:-34px;opacity:.5}.tone-mint .big-badge::before,.tone-mint .big-badge::after{display:none}
 .tone-yellow .big-badge{animation:beat 1.2s ease-in-out infinite}
 @keyframes beat{50%{transform:scale(1.04)}}
+.logo{display:inline-flex;align-items:center;gap:6px;font-weight:800;font-size:23px;letter-spacing:-.02em;line-height:1}
+.logo i{font-style:normal;color:#2f8cff}
+.pm{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.pill.red{background:#fc5f5f;color:var(--plum)}
+.phone.tone-red{--bg:#fc5f5f;--text:var(--plum);--muted:#2a1020;--btn-bg:var(--plum);--btn-fg:#fff;--surface:rgba(22,10,34,.12);--line:rgba(22,10,34,.4);--accent:var(--plum)}
+.tone-red .big-badge{color:#fc5f5f;animation:beat .9s ease-in-out infinite}.tone-red .big-badge::after{inset:-34px;opacity:.5}.tone-red .big-badge::before{display:block}
+.tone-red .badge-top{color:#fff}
+.tone-red .big-badge{margin:30px auto 40px}
+.ring{width:160px;height:160px;border-radius:50%;margin:8px auto;display:grid;place-items:center;background:conic-gradient(#fc5f5f var(--p),var(--line) 0);flex:none}
+.ring>div{width:132px;height:132px;border-radius:50%;background:var(--bg);display:grid;place-content:center;text-align:center}
+.ring b{font-size:48px;font-weight:800;line-height:1}.ring small{font-size:14px;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -111,7 +127,9 @@ const store = {
 let prefs = store.get('prefs') || {};
 
 /* ---------- tela: telas dos mockups (ouvindo, confirmação, trajeto, ônibus chegando, chegada). Só espelha a voz; nada é tocável. ---------- */
-const IC = { mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>', bus: '<rect x="4" y="3" width="16" height="14" rx="3"/><path d="M4 11h16M8 17v3M16 17v3"/><circle cx="8" cy="14" r=".6"/><circle cx="16" cy="14" r=".6"/>', check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>', pin: '<path d="M12 21s7-6.2 7-11a7 7 0 0 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/>', vol: '<path d="M4 10v4h3l4 3V7l-4 3H4z"/><path d="M15 9a4 4 0 0 1 0 6M17.5 6.5a8 8 0 0 1 0 11"/>', alert: '<path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17v.5"/>', clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', bars: '<path d="M6 10v4M10 6v12M14 9v6M18 7v10"/>', pencil: '<path d="M4 20l4-1L19 8l-3-3L5 16z"/>', vib: '<rect x="8" y="4" width="8" height="16" rx="2"/><path d="M4 8v8M20 8v8"/>' };
+const IC = { mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>', bus: '<rect x="4" y="3" width="16" height="14" rx="3"/><path d="M4 11h16M8 17v3M16 17v3"/><circle cx="8" cy="14" r=".6"/><circle cx="16" cy="14" r=".6"/>', check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>', pin: '<path d="M12 21s7-6.2 7-11a7 7 0 0 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/>', vol: '<path d="M4 10v4h3l4 3V7l-4 3H4z"/><path d="M15 9a4 4 0 0 1 0 6M17.5 6.5a8 8 0 0 1 0 11"/>', alert: '<path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17v.5"/>', clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', bars: '<path d="M6 10v4M10 6v12M14 9v6M18 7v10"/>', pencil: '<path d="M4 20l4-1L19 8l-3-3L5 16z"/>', vib: '<rect x="8" y="4" width="8" height="16" rx="2"/><path d="M4 8v8M20 8v8"/>', phone: '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/>', shield: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M12 8v5M12 16v.5"/>' };
+const PERSON = '<svg class="pm" viewBox="0 0 24 24" aria-hidden="true"><circle cx="14.5" cy="4" r="2.1"/><path d="M13 8.2L11 14.5M13 8.2l4 3 2.2-1M13 8.2L9 9.6 7.6 13M11 14.5l4.2 3.3-.4 4.2M11 14.5L8 18.2H4.6"/></svg>';
+const LOGO = '<span class="logo" aria-label="GuIa">' + PERSON + '<span>gu<i>ia</i></span></span>';
 const ic = n => '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">' + IC[n] + '</svg>';
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const eq = '<span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>';
@@ -126,35 +144,54 @@ function setCaption(t) { S.cap = t; document.querySelectorAll('[data-cap]').forE
 function setHeard(t) { S.heard = t; const e = document.querySelector('[data-heard]'); if (e) e.textContent = t ? '“' + t + '”' : '\u00a0'; }
 function setSimBanner() { if (S.view) show(S.view, S.vdata); }
 function show(name, d) {
-  S.view = name; S.vdata = d || {}; d = S.vdata; const ph = $('phone'), v = $('view');
-  ph.className = 'phone' + (name === 'near' ? ' tone-yellow' : name === 'arrive' ? ' tone-mint' : '');
+  const isEmg = name === 'emg1' || name === 'emg2';
+  if (S.emg && S.emg.phase && !isEmg) { S.view = name; S.vdata = d || {}; return; }
+  if (!isEmg) { S.view = name; S.vdata = d || {}; d = S.vdata; } else d = d || {};
+  const ph = $('phone'), v = $('view');
+  ph.className = 'phone' + (name === 'near' ? ' tone-yellow' : name === 'arrive' ? ' tone-mint' : name === 'emg2' ? ' tone-red' : '');
   const snd = '<p class="fine">' + ic('vol') + (prefs.vib === false ? 'Som ativo' : ic('vib') + 'Som e vibração ativos') + '</p>';
   const micPill = '<div class="btn">' + ic('mic') + '<span data-pill-txt>' + PILL[S.st || 'idle'][0] + '</span></div>';
   let h = '';
   if (name === 'perm') {
     const row = (i, a, b, ok) => '<div class="card"><span class="badge">' + ic(i) + '</span><div><b>' + a + '</b><span>' + b + '</span></div><em>' + (ok ? ic('check') + 'Liberado' : '') + '</em></div>';
-    h = simNote() + '<div class="top"><span class="gl">Guia por voz</span>' + pillHTML() + '</div><h1 class="h1 big" style="margin-top:8px">Antes de sair, duas permissões</h1>' +
+    h = simNote() + '<div class="top">' + LOGO + '' + pillHTML() + '</div><h1 class="h1 big" style="margin-top:8px">Antes de sair, duas permissões</h1>' +
       '<div class="cards">' + row('pin', 'Localização', 'Para saber onde você está e avisar a hora de descer.', S.geoOK || S.sim) + row('mic', 'Microfone', 'Para ouvir seu destino e suas perguntas.', S.micOK) + '</div>' +
       '<div class="grow"></div><p class="sub strong" data-cap>' + esc(S.cap || '') + '</p><p class="sub">Responda por voz: sim ou não.</p>';
+  } else if (name === 'emg1') {
+    const e = S.emg, pct = Math.max(0, e.left / 20) * 360;
+    h = '<div class="top">' + LOGO + '<span class="pill red">' + ic('alert') + 'Palavra ouvida 1 vez</span></div><div class="grow"></div>' +
+      '<div class="ring" style="--p:' + pct + 'deg"><div><b>' + e.left + '</b><small>segundos</small></div></div>' +
+      '<h1 class="h1 big c">Diga de novo para ligar para o 190</h1><p class="sub c">Se não repetir, nada acontece.</p><div class="grow"></div><div class="btn o">Diga: foi sem querer</div>';
+  } else if (name === 'emg2') {
+    const e = S.emg, wh = emgWhere();
+    h = '<span class="badge-top">' + ic('shield') + 'Emergência</span><div class="grow"></div><div class="big-badge" aria-hidden="true">' + ic('phone') + '</div>' +
+      '<h1 class="h1 big c">Ligando para o 190</h1><p class="sub strong c">Em ' + e.left + ' segundos.' + (wh ? '<br>' + esc(wh) : '') + '</p><div class="grow"></div><div class="btn o">Diga: cancelar</div><p class="sub c" style="font-size:16px">Ou diga “cancelar”.</p>';
+  } else if (name === 'walk') {
+    const w = S.walk || {};
+    h = simNote() + '<div class="head"><span class="bb">' + PERSON + '</span><h1>Vá até o ponto</h1></div>' +
+      '<div class="ring" style="--p:' + Math.round(Math.max(0, Math.min(1, 1 - (w.d || 0) / (w.d0 || 1))) * 360) + 'deg;background:conic-gradient(var(--ok) var(--p),var(--line) 0)"><div><b>' + (w.d != null ? Math.max(0, Math.round(w.d / 10) * 10) : '…') + '</b><small>metros</small></div></div>' +
+      '<p class="h1 s c" data-walkdir>' + esc(w.dir || 'Calculando a direção…') + '</p>' +
+      '<ol class="tl"><li><span class="node pin">' + ic('pin') + '</span><div><small>PONTO · EMBARQUE</small><b>' + esc(w.stop ? nm(w.stop) : '') + '</b></div></li></ol>' +
+      '<div class="grow"></div><div class="acts">' + micPill + '</div><p class="fine">' + ic('vol') + 'Aviso a cada 20 metros</p>';
   } else if (name === 'blocked') {
     const steps = d.frame
       ? ['Abra o Guia direto no Chrome, em uma aba própria.', 'Quando o navegador perguntar, escolha Permitir.', 'Pronto: nas próximas vezes ele começa sozinho.']
       : ['Abra o menu do navegador.', 'Vá em Configurações.', 'Privacidade e Segurança.', 'Configurações do Site.', 'Microfone: mude para Permitir.'];
-    h = '<div class="top"><span class="gl">Guia por voz</span>' + pillHTML() + '</div><h1 class="h1" style="margin-top:6px">Microfone bloqueado</h1>' +
+    h = '<div class="top">' + LOGO + '' + pillHTML() + '</div><h1 class="h1" style="margin-top:6px">Microfone bloqueado</h1>' +
       '<p class="sub">' + (d.frame ? 'O Guia está aberto dentro de outra página, e o navegador não libera o microfone ali.' : 'Libere uma vez e ele passa a começar sozinho.') + '</p>' +
       '<div class="cards">' + steps.map((s, i) => '<div class="card"><span class="badge" style="font-weight:800;font-size:20px">' + (i + 1) + '</span><div><b style="font-size:17px">' + esc(s) + '</b></div></div>').join('') + '</div>' +
       '<div class="grow"></div><p class="sub c">Assim que liberar, eu percebo sozinho. Ou diga “Pronto”.</p>';
   } else if (name === 'say') {
-    h = simNote() + '<div class="top"><span class="gl">Guia por voz</span>' + pillHTML() + '</div><div class="grow"></div>' + ic('mic').replace('class="ic"', 'class="ic" style="font-size:44px"') +
+    h = simNote() + '<div class="top">' + LOGO + '' + pillHTML() + '</div><div class="grow"></div>' + ic('mic').replace('class="ic"', 'class="ic" style="font-size:44px"') +
       '<h1 class="h1" data-cap>' + esc(S.cap || '') + '</h1>' + (d.hint ? '<p class="sub">' + esc(d.hint) + '</p>' : '') +
       (d.tip ? '<div class="tip"><b>Dica</b>' + esc(d.tip) + '</div>' : '') + '<div class="grow"></div>' + micPill;
   } else if (name === 'listen') {
-    h = simNote() + '<div class="top"><span class="gl">Guia por voz</span>' + pillHTML() + '</div>' +
+    h = simNote() + '<div class="top">' + LOGO + '' + pillHTML() + '</div>' +
       '<p class="sub strong c" data-cap style="margin-top:6px">' + esc(S.cap || '') + '</p><p class="quote" data-heard>' + (S.heard ? '“' + esc(S.heard) + '”' : '\u00a0') + '</p>' +
       '<div class="mic" aria-hidden="true">' + ic('mic') + '</div><p class="sub c">Diga o nome ou o número da parada.</p><div class="grow"></div>' +
       '<div class="infocard">' + ic('bus') + '<span>Linha piloto 875C-10<br>Terminal Lapa → Santa Cruz</span></div>';
   } else if (name === 'confirm') {
-    h = simNote() + '<div class="top"><span class="gl">Guia por voz</span>' + pillHTML() + '</div><div class="grow"></div><p class="lbl">Você disse:</p><h1 class="h1 big">' + esc(d.dest) + '</h1>' +
+    h = simNote() + '<div class="top">' + LOGO + '' + pillHTML() + '</div><div class="grow"></div><p class="lbl">Você disse:</p><h1 class="h1 big">' + esc(d.dest) + '</h1>' +
       '<div class="row">' + ic('bus') + '<span>Linha 875C-10, saindo de ' + esc(d.from) + '</span></div><div class="row">' + ic('clock') + '<span>Cerca de ' + d.mins + ' minutos (estimativa)</span></div>' +
       '<div class="grow"></div><div class="acts"><div class="btn">' + ic('check') + 'Diga: confirmar</div><div class="btn o">' + ic('pencil') + 'Diga: corrigir</div></div>';
   } else if (name === 'route') {
@@ -184,20 +221,23 @@ function setTrip() { if (S.nav && S.nav.phase !== 'done') show(S.nav.dest.id - S
 /* ---------- sons e vibração ---------- */
 let actx = null;
 function tone(f, d, at) { try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); const o = actx.createOscillator(), g = actx.createGain(); o.frequency.value = f; g.gain.setValueAtTime(.0001, actx.currentTime + at); g.gain.exponentialRampToValueAtTime(.25, actx.currentTime + at + .01); g.gain.exponentialRampToValueAtTime(.0001, actx.currentTime + at + d); o.connect(g); g.connect(actx.destination); o.start(actx.currentTime + at); o.stop(actx.currentTime + at + d + .02); } catch (e) {} }
-const SND = { listen: [[880, .08]], ok: [[660, .1], [880, .14]], err: [[240, .25]], pass: [[620, .09]], near: [[700, .1], [700, .1], [700, .1]], arrive: [[523, .15], [659, .15], [784, .3]] };
-const VIB = { ok: [100], err: [300], pass: [100], near: [100, 80, 100, 80, 100], arrive: [400, 100, 100, 100, 100] };
-function sound(n) { let t = 0; (SND[n] || []).forEach(p => { tone(p[0], p[1], t); t += p[1] + .04; }); if (prefs.vib !== false && VIB[n] && navigator.vibrate) { try { navigator.vibrate(VIB[n]); } catch (e) {} } }
+const SND = { listen: [[880, .08]], ok: [[660, .1], [880, .14]], err: [[240, .25]], pass: [[620, .09]], near: [[700, .1], [700, .1], [700, .1]], arrive: [[523, .15], [659, .15], [784, .3]], emg1: [[520, .12], [520, .12], [520, .12]], emg2: [[880, .3], [660, .3], [880, .3], [660, .3]] };
+const VIB = { ok: [100], err: [300], pass: [100], near: [100, 80, 100, 80, 100], arrive: [400, 100, 100, 100, 100], emg1: [100, 80, 100, 80, 100], emg2: [400, 100, 400, 100, 400, 100, 400] };
+function sound(n) { if (S.emg && S.emg.phase === 'one' && ['listen', 'ok', 'err', 'pass', 'near'].indexOf(n) >= 0) return; let t = 0; (SND[n] || []).forEach(p => { tone(p[0], p[1], t); t += p[1] + .04; }); if (prefs.vib !== false && VIB[n] && navigator.vibrate) { try { navigator.vibrate(VIB[n]); } catch (e) {} } }
 function notify(title, body) { try { if (prefs.notif && window.Notification && Notification.permission === 'granted') new Notification(title, { body, silent: true }); } catch (e) {} }
 
 /* ---------- fala (SpeechSynthesis) ---------- */
 let voice = null, spTok = 0, speaking = false, speechBlocked = false;
 function pickVoice() { const v = speechSynthesis.getVoices(); voice = v.find(x => /pt-BR/i.test(x.lang) && /google|luciana|francisca|microsoft/i.test(x.name)) || v.find(x => /pt[-_]BR/i.test(x.lang)) || v.find(x => /^pt/i.test(x.lang)) || null; }
 if ('speechSynthesis' in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
-function speak(text) {
+let lastEnd = 0;
+function speak(text, o) {
   return new Promise(res => {
-    setCaption(text); const my = ++spTok; stopRec(); speaking = true; setState('speaking');
+    S.lastSpoken = norm(text);
+    if (S.emg && S.emg.phase && !(o && o.force)) { res(); return; } /* na emergência não há fala, para não alertar quem está por perto */
+    setCaption(text); const my = ++spTok; speaking = true; setState('speaking');
     let done = false, wd;
-    const fin = () => { if (done) return; done = true; clearTimeout(wd); if (my === spTok) { speaking = false; setState('idle'); startRec(); } res(); };
+    const fin = () => { if (done) return; done = true; clearTimeout(wd); if (my === spTok) { speaking = false; lastEnd = Date.now(); setState(recRunning ? 'listening' : 'idle'); startRec(); } res(); };
     if (!('speechSynthesis' in window)) { wd = setTimeout(fin, 800 + text.length * 60); return; }
     try { speechSynthesis.cancel(); } catch (e) {}
     const u = new SpeechSynthesisUtterance(text); u.lang = 'pt-BR'; u.rate = .98; if (voice) u.voice = voice;
@@ -209,20 +249,62 @@ function speak(text) {
 /* Alguns navegadores só liberam a voz depois do primeiro gesto na página. Se isso acontecer, qualquer toque ou tecla libera; o Guia repete sozinho. */
 ['pointerdown', 'keydown', 'touchstart'].forEach(ev => addEventListener(ev, () => { try { actx && actx.resume(); } catch (e) {} speechBlocked = false; }, { passive: true }));
 
-/* ---------- escuta (SpeechRecognition), sempre ativa, pausada só enquanto o Guia fala ---------- */
+/* ---------- escuta (SpeechRecognition): sempre ativa, inclusive enquanto o Guia fala (para a palavra de emergência) ---------- */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let rec = null, recRunning = false, waiter = null, mainHandler = null;
 function startRec() {
-  if (!SR || speaking || recRunning || !S.micOK) return;
+  if (!SR || recRunning || !S.micOK) return;
   const r = new SR(); r.lang = 'pt-BR'; r.continuous = true; r.interimResults = false; r.maxAlternatives = 3; rec = r;
+  try { if ('processLocally' in r) r.processLocally = !navigator.onLine && !S.noLocal; } catch (e) {} /* sem internet, usa o reconhecimento do próprio aparelho, se houver */
   r.onstart = () => { recRunning = true; if (!speaking) setState('listening'); };
   r.onresult = e => { for (let i = e.resultIndex; i < e.results.length; i++) if (e.results[i].isFinal) { const alts = Array.from(e.results[i]).map(a => a.transcript).filter(Boolean); if (alts.length) deliver(alts); } };
-  r.onerror = e => { if (e.error === 'not-allowed' || e.error === 'service-not-allowed') { S.micOK = false; S.blocked = true; setState('blocked'); } };
-  r.onend = () => { if (rec !== r) return; recRunning = false; if (!speaking && S.micOK) setTimeout(startRec, 250); };
+  r.onerror = e => { if (e.error === 'language-not-supported') S.noLocal = true; if (e.error === 'not-allowed' || e.error === 'service-not-allowed') { S.micOK = false; S.blocked = true; setState('blocked'); } };
+  r.onend = () => { if (rec !== r) return; recRunning = false; if (S.micOK) setTimeout(startRec, 250); };
   try { r.start(); recRunning = true; } catch (e) { recRunning = false; }
 }
 function stopRec() { const r = rec; rec = null; recRunning = false; if (r) { r.onend = r.onresult = r.onerror = r.onstart = null; try { r.abort(); } catch (e) {} } }
-function deliver(alts) { if (!S.secret) setHeard(alts[0]); if (waiter) { const w = waiter; waiter = null; w(alts); } else if (mainHandler) mainHandler(alts); }
+/* ---------- palavra de emergência: a palavra-chave do cadastro, em qualquer estado do app ---------- */
+const E = { phase: null, left: 0, iv: null }; S.emg = E;
+const EMG_CANCEL = /\b(cancelar|cancela|cancele|foi sem querer|sem querer|nao precisa)\b/;
+let dialFn = n => { location.href = 'tel:' + n; };
+const hcache = new Map();
+async function hashOf(c, salt) { const k = salt + c; if (!hcache.has(k)) hcache.set(k, await sha(c, salt)); return hcache.get(k); }
+async function emgMatch(alts) {
+  const pr = store.get('profile'); if (!pr || !pr.kw) return false;
+  const echo = (Date.now() - lastEnd < 900 || speaking) ? (S.lastSpoken || '').split(' ') : null;
+  for (const a of alts) {
+    const n = norm(a), w = n.split(' ').filter(Boolean), c = new Set([n]);
+    w.forEach((x, i) => { if (x.length >= 3) c.add(x); if (i + 1 < w.length) c.add(x + ' ' + w[i + 1]); });
+    for (const x of c) { if (echo && x.split(' ').every(z => echo.indexOf(z) >= 0)) continue; if (await hashOf(x, pr.salt) === pr.kw) return true; }
+  }
+  return false;
+}
+function emgWhere() { const n = S.nav; if (n) return 'Você está na parada ' + nm(STOPS[n.idx]) + ', no ônibus 875C-10.'; return ''; }
+function emgReset() { clearInterval(E.iv); E.phase = null; E.left = 0; try { speechSynthesis.cancel(); } catch (e) {} show(S.view || 'say', S.vdata); }
+function emgCancel() { emgReset(); sound('ok'); speak('Emergência cancelada.'); }
+function emgTick() {
+  E.left--;
+  if (E.left > 0) return show(E.phase === 'one' ? 'emg1' : 'emg2');
+  if (E.phase === 'one') return emgReset();
+  clearInterval(E.iv); E.phase = null; E.left = 0;
+  try { dialFn('190'); } catch (e) {}
+  setTimeout(() => show(S.view || 'say', S.vdata), 800);
+}
+function emgTrigger() {
+  if (E.phase === 'call') return;
+  clearInterval(E.iv);
+  if (!E.phase) { E.phase = 'one'; E.left = 20; try { speechSynthesis.cancel(); } catch (e) {} sound('emg1'); show('emg1'); }
+  else { E.phase = 'call'; E.left = 5; sound('emg2'); show('emg2'); const sim = S.sim || (S.nav && S.nav.sim);
+    speak(sim ? 'Ligando para o 190 em 5 segundos. É a simulação, mas a ligação é real. Diga cancelar.' : 'Ligando para o 190 em 5 segundos. Diga cancelar para parar. ' + emgWhere(), { force: true }); }
+  E.iv = setInterval(emgTick, 1000);
+}
+async function deliver(alts) {
+  if (E.phase && alts.some(a => EMG_CANCEL.test(norm(a)))) return emgCancel();
+  if (await emgMatch(alts)) return emgTrigger();
+  if (E.phase) return;
+  if (speaking || Date.now() - lastEnd < 700) return; /* ignora o eco da própria voz do Guia */
+  const ls = S.lastSpoken || ''; alts = alts.filter(a => { const n = norm(a); return !(n.split(' ').length >= 4 && ls.indexOf(n) >= 0); }); if (!alts.length) return;
+  if (!S.secret) setHeard(alts[0]); if (waiter) { const w = waiter; waiter = null; w(alts); } else if (mainHandler) mainHandler(alts); }
 function listenOnce(ms) { return new Promise(res => { const t = setTimeout(() => { waiter = null; res(null); }, ms); waiter = a => { clearTimeout(t); res(a); }; }); }
 
 /* ---------- perguntar e entender ---------- */
@@ -247,7 +329,7 @@ async function ask(prompt, parse, o) {
     if (!alts) { p = o.again || prompt; continue; }
     if (!o.raw && !o.noGlobal) for (const a of alts) { if (await globalCmd(norm(a))) { p = o.again || prompt; alts.length = 0; break; } }
     if (!alts.length) continue;
-    if (o.raw) { const r = parse(alts.map(norm)); if (r !== undefined) { S.secret = false; sound('ok'); return r; } p = 'Não entendi. ' + (o.again || prompt); continue; }
+    if (o.raw) { const r = parse(alts.map(norm)); if (r && r.retry) { p = r.retry; continue; } if (r !== undefined) { S.secret = false; sound('ok'); return r; } p = 'Não entendi. ' + (o.again || prompt); continue; }
     let retry = null;
     for (const a of alts) { const v = parse(norm(a), a); if (v && v.retry) { retry = v.retry; continue; } if (v !== undefined && v !== null) { S.secret = false; sound('ok'); return v; } }
     sound('err'); p = retry || ('Não entendi. ' + (o.again || prompt));
@@ -273,17 +355,18 @@ const FRAME_MIC = 'O microfone está bloqueado porque o Guia está aberto dentro
 const BLOCK_MIC = 'O microfone está bloqueado no navegador. Vou te ensinar a desbloquear. Passo 1: Abra o menu do navegador. Passo 2: Vá em Configurações. Passo 3: Procure por Privacidade e Segurança. Passo 4: Vá em Configurações do Site. Passo 5: Encontre Microfone e mude para Permitir. Quando terminar, diga Pronto.';
 const BLOCK_GEO = 'A localização está bloqueada no navegador. Vou te ensinar a desbloquear. Passo 1: Abra o menu do navegador. Passo 2: Vá em Configurações. Passo 3: Procure por Privacidade e Segurança. Passo 4: Vá em Configurações do Site. Passo 5: Encontre Localização e mude para Permitir. Quando terminar, diga Pronto.';
 const NATIVE_PROMPT = 'O navegador vai mostrar uma pergunta na tela. Use seus gestos de leitor de tela para ir até Permitir e dê dois toques. Estou aguardando.';
-/* Sem perguntas: o app começa a falar ao abrir e pede o microfone direto ao navegador (o aviso é do próprio navegador). */
 function requestMic() { return navigator.mediaDevices.getUserMedia({ audio: true }).then(s => { s.getTracks().forEach(t => t.stop()); S.micOK = true; S.blocked = false; startRec(); return true; }, () => false); }
-/* Só entra se o navegador negou o microfone: ensina a desbloquear e percebe sozinho quando for liberado (ou ao ouvir "Pronto"). */
+/* Microfone: o Guia explica por voz e aciona o navegador (sem microfone ainda não há como ouvir o "sim", então o aviso do navegador já aparece). */
 async function ensureMic() {
   for (;;) {
     const st = await permState('microphone');
     if (st === 'granted' || S.micOK) { S.micOK = true; S.blocked = false; startRec(); return; }
     if (st === 'denied' || micPolicyBlocked()) { setState('blocked'); const fr = framed() || micPolicyBlocked(); show('blocked', { frame: fr }); await unblockRound('microphone', fr ? FRAME_MIC : BLOCK_MIC); continue; }
-    if (await requestMic()) { sound('ok'); return; }
-    await speak('Preciso do microfone para ouvir você. Quando o navegador perguntar, escolha Permitir.');
-    await sleep(2500);
+    show('perm'); const req = requestMic();
+    await speak('Para eu poder ouvir você, preciso da permissão do microfone. Posso acessar o microfone? Diga sim ou não.');
+    await speak(NATIVE_PROMPT);
+    if (await req) { sound('ok'); show('perm'); return; }
+    await speak('Sem o microfone eu não consigo funcionar. Por favor, diga sim para me autorizar.');
   }
 }
 const getPos = (t) => new Promise((res, rej) => navigator.geolocation ? navigator.geolocation.getCurrentPosition(p => res({ lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy }), rej, { enableHighAccuracy: true, timeout: t || 15000, maximumAge: 5000 }) : rej({ code: 0 }));
@@ -292,9 +375,36 @@ async function offerSim() {
   if (sim) { S.sim = true; S.modeChosen = true; setSimBanner(); await speak('Modo simulação ativado.'); return true; }
   await speak('Sem localização e sem simulação, não consigo guiar você.'); return false;
 }
+async function ensureGeo() {
+  for (;;) {
+    const st = await permState('geolocation');
+    if (st === 'granted') { S.geoOK = true; return; }
+    if (st === 'denied') { if (await offerSim()) return; await unblockRound('geolocation', BLOCK_GEO); continue; }
+    show('perm');
+    const yes = await ask('Agora preciso saber onde você está. Posso acessar sua localização? Diga sim ou não.', yn, { noGlobal: true, view: 'perm' });
+    if (!yes) { if (await offerSim()) return; await speak('Sem localização não consigo guiar você pelo GPS. Vou perguntar de novo.'); continue; }
+    await speak(NATIVE_PROMPT);
+    try { await getPos(25000); S.geoOK = true; sound('ok'); show('perm'); return; }
+    catch (e) { if (e && e.code === 1) { if (await offerSim()) return; } else { S.geoOK = true; await speak('Ainda não consegui sinal de GPS. Vou tentar de novo quando você iniciar a viagem.'); return; } }
+  }
+}
+async function ensureExtras() {
+  if (prefs.notif === undefined) {
+    const yes = await ask('Quer que eu envie avisos sonoros? Diga sim ou não.', yn, { noGlobal: true });
+    if (yes && window.Notification) { await speak(NATIVE_PROMPT); try { prefs.notif = (await Notification.requestPermission()) === 'granted'; } catch (e) { prefs.notif = false; } } else prefs.notif = false;
+    store.set('prefs', prefs);
+  }
+  if (prefs.vib === undefined) {
+    const yes = await ask('Posso ativar a vibração? Diga sim ou não.', yn, { noGlobal: true });
+    if (yes && navigator.vibrate) { prefs.vib = true; try { navigator.vibrate(250); } catch (e) {} } else { prefs.vib = false; if (yes) await speak('Seu aparelho não suporta vibração. Vou usar voz e sons.'); }
+    store.set('prefs', prefs);
+  }
+}
 /* ---------- cadastro 100% por voz, com persistência ---------- */
 async function sha(t, salt) { try { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + t)); return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join(''); } catch (e) { let h = 5381; (salt + t).split('').forEach(c => h = ((h << 5) + h + c.charCodeAt(0)) | 0); return 'x' + h; } }
 const parseName = (n, raw) => { const c = n.replace(/\b(meu nome e|me chamo|pode me chamar de|me chame de|eu sou o|eu sou a|eu sou|sou o|sou a|nome)\b/g, '').trim(); if (c.length < 2 || c.split(' ').length > 4) return undefined; return c.split(' ').map(w => w[0].toUpperCase() + w.slice(1)).join(' '); };
+const KW_BAD = /\b(sim|nao|pronto|cancelar|ajuda|parar|pare|avancar|continuar|repetir|sair|guia|ok|certo|confirmar|corrigir|simulacao)\b/;
+const kwParse = a => { if (!a[0] || a[0].length < 2) return undefined; if (a.some(x => KW_BAD.test(x))) return { retry: 'Essa palavra é usada em comandos. Escolha outra palavra, que você não costuma falar no dia a dia. Diga sua palavra agora.' }; return a; };
 async function register() {
   const pend = store.get('reg') || {}; let name = pend.name;
   while (!name) {
@@ -304,7 +414,7 @@ async function register() {
   }
   let agreed;
   for (;;) {
-    const w1 = await ask('Agora, escolha uma palavra-chave de segurança. Diga sua palavra agora.', a => a[0] && a[0].length >= 2 ? a : undefined, { raw: true, tip: 'Escolha uma palavra só, que você não costuma falar no dia a dia.', hint: '' });
+    const w1 = await ask('Agora, escolha uma palavra-chave de segurança. Ela servirá para proteger seu perfil E também como palavra de emergência a qualquer momento, no modo real ou na simulação. Diga sua palavra agora.', kwParse, { raw: true, tip: 'Escolha uma palavra só, que você não costuma falar no dia a dia.', hint: '' });
     const w2 = await ask('Repita sua palavra-chave para confirmar.', a => a[0] && a[0].length >= 2 ? a : undefined, { raw: true });
     const hit = w1.find(x => w2.indexOf(x) >= 0);
     if (hit) { agreed = hit; break; }
@@ -360,25 +470,95 @@ async function planTrip(first) {
   for (;;) {
     const dest = await askStop(prompt, 'Para onde você deseja ir?'); prompt = 'Para onde você deseja ir?';
     if (dest.id === 1) { await speak('O Terminal Lapa é o ponto inicial da linha. Só tenho o sentido Terminal Lapa para Metrô Santa Cruz. Escolha outro destino.'); continue; }
-    let origin = null; const askOrigin = () => askStop('Onde você está agora?', 'Onde você está agora?');
+    let origin = null, walk = false; const askOrigin = () => askStop('Onde você está agora?', 'Onde você está agora?');
     if (S.sim) origin = await askOrigin();
     else {
       await speak('Estou identificando sua localização.');
-      let pos = null; try { pos = await getPos(20000); S.geoOK = true; } catch (e) {}
+      let pos = null; try { pos = await getPos(20000); S.geoOK = true; S.lastPos0 = pos; } catch (e) {}
       if (!pos) { if (await offerSim()) origin = await askOrigin(); else continue; }
       else {
         const nr = nearest(pos, 0, Math.max(0, dest.id - 2));
-        if (nr.d > 2500) { await speak('Você está a ' + fmtD(nr.d) + ' da linha 875C-10.'); if (await offerSim()) origin = await askOrigin(); else continue; }
-        else { origin = nr.s; origin.dist = nr.d; }
+        if (nr.d > 100) { /* não está no ponto (mais de 100 m): pergunta se segue no funcionamento normal ou na simulação */
+          const far = nr.d > 2500;
+          const choice = await ask((far ? 'Você está a ' + fmtD(nr.d) + ' da linha 875C-10.' : 'Você não está no ponto. A parada mais próxima é ' + nm(nr.s) + ', a ' + fmtD(nr.d) + '.') + ' Quer seguir no funcionamento normal ou usar a simulação? Diga normal ou simulação.',
+            n => /\b(simula\w*|teste)\b/.test(n) ? 'sim' : /\b(normal|real|gps|seguir|funcionamento)\b/.test(n) ? 'normal' : undefined, { noGlobal: true, again: 'Diga normal ou simulação.' });
+          if (choice === 'sim') { S.sim = true; S.modeChosen = true; setSimBanner(); await speak('Modo simulação ativado.'); origin = await askOrigin(); }
+          else if (far) { await speak('Você está longe demais da linha para eu acompanhar pelo GPS. Quando estiver perto de uma parada, é só pedir de novo.'); continue; }
+          else { origin = nr.s; origin.dist = nr.d; walk = true; }
+        } else { origin = nr.s; origin.dist = nr.d; }
       }
     }
     if (dest.id <= origin.id) { await speak('Essa parada fica para trás. A linha 875C-10 só vai do Terminal Lapa ao Metrô Santa Cruz. Vamos escolher o destino de novo.'); continue; }
     const mins = Math.max(1, Math.round((dest.id - origin.id) * 1.83));
     S.vdata = { dest: nm(dest), from: nm(origin), mins };
-    const ok = await ask('Entendi: ' + nm(dest) + ', pela linha 875C-10, saindo de ' + nm(origin) + (!S.sim && origin.dist != null ? ', a ' + fmtD(origin.dist) + ' de você' : '') + '. Cerca de ' + mins + ' minutos, é uma estimativa. Diga confirmar ou corrigir.', n => /\b(corrigir|corrige|errado|nao|voltar)\b/.test(n) ? false : /\b(confirmar|confirmo|confirma|sim|certo|isso|ok|pode)\b/.test(n) ? true : undefined, { view: 'confirm', again: 'Diga confirmar ou corrigir.' });
+    const ok = await ask('Entendi: ' + nm(dest) + ', pela linha 875C-10. ' + (walk ? 'O ponto mais próximo é ' + nm(origin) + ', a ' + fmtD(origin.dist) + ' de você. Vou te guiar até lá antes de começar. ' : 'Saindo de ' + nm(origin) + (!S.sim && origin.dist != null ? ', a ' + fmtD(origin.dist) + ' de você' : '') + '. ') + 'Cerca de ' + mins + ' minutos de ônibus, é uma estimativa. Diga confirmar ou corrigir.', n => /\b(corrigir|corrige|errado|nao|voltar)\b/.test(n) ? false : /\b(confirmar|confirmo|confirma|sim|certo|isso|ok|pode)\b/.test(n) ? true : undefined, { view: 'confirm', again: 'Diga confirmar ou corrigir.' });
     if (!ok) { prompt = 'Certo. Para onde você quer ir?'; continue; }
-    return { origin, dest };
+    return { origin, dest, walk };
   }
+}
+
+
+/* ---------- introdução até o ponto: guia a pé quando o usuário está a mais de 100 m da parada ---------- */
+function bearing(a, b) { const r = x => x * Math.PI / 180, y = Math.sin(r(b.lng - a.lng)) * Math.cos(r(b.lat)), x = Math.cos(r(a.lat)) * Math.sin(r(b.lat)) - Math.sin(r(a.lat)) * Math.cos(r(b.lat)) * Math.cos(r(b.lng - a.lng)); return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360; }
+const CARD = ['norte', 'nordeste', 'leste', 'sudeste', 'sul', 'sudoeste', 'oeste', 'noroeste'];
+function walkDir(w, pos) {
+  const tb = bearing(pos, w.stop);
+  if (w.heading == null) return 'O ponto fica ao ' + CARD[Math.round(tb / 45) % 8] + ' de você. Comece a andar para eu saber para que lado você vai.';
+  const diff = ((tb - w.heading + 540) % 360) - 180;
+  if (Math.abs(diff) < 30) return 'Siga em frente.';
+  if (Math.abs(diff) > 150) return 'O ponto está atrás de você. Dê meia-volta.';
+  return diff > 0 ? 'Vire à direita.' : 'Vire à esquerda.';
+}
+async function walkToStop(stop) {
+  const w = S.walk = { stop, heading: null, prev: null, bucket: null, best: null, d: null, d0: null, dir: '', phase: 'run', last: '', done: null };
+  const finished = new Promise(r => w.done = r); let watch = null, busy = false;
+  mainHandler = async alts => { if (busy) return; busy = true; try {
+    for (const a of alts) { const m = norm(a);
+      if (/\b(sair|cancelar|encerrar|desistir)\b/.test(m)) { w.phase = 'done'; clearTrip(); await speak('Caminhada cancelada.'); w.done('cancel'); return; }
+      if (RE_SIM_ON.test(m)) { S.sim = true; S.modeChosen = true; setSimBanner(); w.phase = 'done'; clearTrip(); await speak('Modo simulação ativado.'); w.done('cancel'); return; }
+      if (/\b(repetir|repete|onde estou|ajuda)\b/.test(m)) { await speak(w.last || 'Ainda estou calculando onde você está.'); return; }
+    } sound('err'); } finally { busy = false; } };
+  const say = txt => { w.last = txt; return speak(txt); };
+  const onPos = async c => {
+    if (w.phase !== 'run') return;
+    const pos = { lat: c.latitude, lng: c.longitude }, d = dist(pos, stop);
+    if (w.prev && dist(w.prev, pos) >= 5) { w.heading = bearing(w.prev, pos); w.prev = pos; } else if (!w.prev) w.prev = pos;
+    w.d = d; if (w.d0 == null) w.d0 = d; w.dir = walkDir(w, pos);
+    if (S.view === 'walk') show('walk');
+    if (d <= Math.max(25, (c.accuracy || 0))) { w.phase = 'done'; sound('arrive'); notify('GuIa', 'Você chegou ao ponto: ' + nm(stop));
+      await say('Você chegou ao ponto ' + nm(stop) + '. Prepare-se para embarcar.'); w.done('arrived'); return; }
+    const b = Math.floor(d / 20);
+    if (w.bucket == null) w.bucket = b;
+    if (w.best == null || d < w.best) w.best = d;
+    if (b < w.bucket) { w.bucket = b; sound('pass'); await say('Faltam cerca de ' + pl(Math.round(d / 10) * 10, 'metro', 'metros') + '. ' + w.dir); }
+    else if (d > w.best + 30) { w.best = d; w.bucket = b; await say('Você está se afastando do ponto. Faltam cerca de ' + pl(Math.round(d / 10) * 10, 'metro', 'metros') + '. ' + w.dir); }
+  };
+  show('walk');
+  watch = navigator.geolocation.watchPosition(p => onPos(p.coords), e => { if (e.code === 1) { w.phase = 'done'; speak('A permissão de localização foi retirada.'); w.done('cancel'); } }, { enableHighAccuracy: true, maximumAge: 1000, timeout: 20000 });
+  w.d = stop.dist != null ? stop.dist : null; w.d0 = w.d;
+  await say((stop.dist != null ? 'Você não está no ponto. Vou te guiar até o ponto ' + nm(stop) + ', a ' + fmtD(stop.dist) + ' de você.' : 'Retomando a caminhada até o ponto ' + nm(stop) + '.') + (S.lastPos0 ? ' O ponto fica ao ' + CARD[Math.round(bearing(S.lastPos0, stop) / 45) % 8] + ' de você.' : '') + ' As indicações são em linha reta, então preste atenção ao entorno e use sua bengala ou cão-guia. Aviso a cada 20 metros.');
+  const r = await finished;
+  if (watch != null) navigator.geolocation.clearWatch(watch);
+  mainHandler = null; S.walk = null; return r;
+}
+
+
+/* ---------- memória de trajeto: o progresso fica salvo até a viagem ser concluída ou cancelada ---------- */
+function saveTrip(o) { store.set('trip', { origin: o.origin, dest: o.dest, idx: o.idx, sim: !!o.sim, phase: o.phase || 'ride', t: Date.now() }); }
+function clearTrip() { store.del('trip'); }
+function validTrip() {
+  const s = store.get('trip'); if (!s) return null;
+  const ok = x => Number.isInteger(x) && x >= 1 && x <= STOPS.length;
+  if (!ok(s.origin) || !ok(s.dest) || !Number.isInteger(s.idx) || s.idx < 0 || s.idx > STOPS.length - 1 || s.dest <= s.origin) { clearTrip(); return null; }
+  if (s.phase === 'ride' && s.idx >= s.dest - 1) { clearTrip(); return null; } /* já chegou: nada a retomar */
+  return s;
+}
+async function offerResume(greet, s) {
+  const dest = STOPS[s.dest - 1], cur = STOPS[s.idx], org = STOPS[s.origin - 1];
+  const where = s.phase === 'walk' ? 'caminhando até o ponto ' + nm(org) : 'na parada ' + nm(cur);
+  const yes = await ask((greet ? greet + ' ' : '') + 'Notei que você interrompeu um trajeto. Você estava indo para ' + nm(dest) + ', ' + where + '. Quer continuar de onde parou? Diga sim ou não.', yn, { noGlobal: true });
+  if (!yes) clearTrip();
+  return yes;
 }
 
 /* ---------- viagem: simulação e GPS real, comandos por voz ---------- */
@@ -390,6 +570,7 @@ function passMsg(s, l, n) {
   return 'Atenção: passando pela parada ' + nm(s) + '. Faltam ' + pl(l, 'parada', 'paradas') + '. Próxima: ' + nm(nx) + ', a ' + fmtD(d) + '.';
 }
 async function arrive(n) {
+  clearTrip();
   const my = n.tok = (n.tok || 0) + 1; clearTimeout(n.timer); n.phase = 'done'; sound('arrive'); notify('GuIa', 'Você chegou: ' + nm(n.dest));
   show('arrive', { dest: nm(n.dest), sim: n.sim });
   await speak('Você chegou ao seu destino: ' + nm(n.dest) + '.' + (n.dest.id === 46 ? ' Fim da linha.' : '') + (n.sim ? ' Fim da simulação.' : '')); n.done('arrived');
@@ -398,6 +579,7 @@ async function step(n, manual) {
   if (n.phase === 'done') return;
   n.idx++; const s = STOPS[n.idx], l = n.dest.id - s.id; const my = ++n.tok; n.count++;
   if (l <= 0) return arrive(n);
+  saveTrip({ origin: n.origin.id, dest: n.dest.id, idx: n.idx, sim: n.sim });
   sound(l === 1 ? 'near' : 'pass'); if (l === 1) notify('GuIa', 'Desça na próxima parada: ' + nm(n.dest));
   S.ans = null; drawTrip(); let msg = passMsg(s, l, n); if (n.sim && n.count % 6 === 0) msg += ' Lembrete: você está no modo simulação.';
   await speak(msg);
@@ -417,8 +599,8 @@ const HELP = 'Você pode dizer: avançar, para pular uma parada na simulação. 
 async function reply(n, text) { S.ans = { q: n.asked || '', a: text }; if (S.view === 'route' || S.view === 'near') show(S.view); await speak(text); }
 async function navCmd(n, c) {
   const m = c;
-  if (/\b(sair|encerrar|cancelar viagem|cancelar rota|terminar)\b/.test(m) && !RE_SIM_OFF.test(m)) { clearTimeout(n.timer); n.phase = 'done'; n.tok++; await speak('Viagem encerrada.'); n.done('cancel'); return true; }
-  if (RE_SIM_OFF.test(m)) { clearTimeout(n.timer); n.phase = 'done'; n.tok++; S.sim = false; S.modeChosen = true; setSimBanner(); await speak('Modo simulação desativado. Usando localização real.'); n.done('cancel'); return true; }
+  if (/\b(sair|encerrar|cancelar viagem|cancelar rota|terminar)\b/.test(m) && !RE_SIM_OFF.test(m)) { clearTimeout(n.timer); n.phase = 'done'; n.tok++; clearTrip(); await speak('Viagem encerrada.'); n.done('cancel'); return true; }
+  if (RE_SIM_OFF.test(m)) { clearTimeout(n.timer); n.phase = 'done'; n.tok++; clearTrip(); S.sim = false; S.modeChosen = true; setSimBanner(); await speak('Modo simulação desativado. Usando localização real.'); n.done('cancel'); return true; }
   if (/\bajuda\b/.test(m)) { await reply(n, HELP); return true; }
   if (/\b(onde estou|onde eu estou)\b/.test(m)) { await reply(n, where(n)); if (!n.sim && n.lastNear) await speak('O GPS indica a parada mais próxima a ' + fmtD(n.lastNear.d) + '.'); return true; }
   if (/\b(para onde vou|destino)\b/.test(m)) { await reply(n, 'Seu destino é ' + nm(n.dest) + ', parada ' + n.dest.id + '. Faltam ' + pl(n.dest.id - STOPS[n.idx].id, 'parada', 'paradas') + '.'); return true; }
@@ -431,17 +613,21 @@ async function navCmd(n, c) {
   return false;
 }
 async function runTrip(t) {
-  const n = S.nav = { origin: t.origin, dest: t.dest, idx: t.origin.id - 1, paused: false, tok: 0, sim: S.sim, timer: null, count: 0, phase: 'run', nearSaid: false };
+  const rs = t.resume || null;
+  const n = S.nav = { origin: t.origin, dest: t.dest, idx: rs ? rs.idx : t.origin.id - 1, paused: false, tok: 0, sim: rs ? !!rs.sim : S.sim, timer: null, count: 0, phase: 'run', nearSaid: false };
   const finished = new Promise(r => n.done = r); let watch = null, busy = false, wl = null;
   try { if (navigator.wakeLock) navigator.wakeLock.request('screen').then(l => wl = l, () => {}); } catch (e) {}
   mainHandler = async alts => { if (busy) return; busy = true; n.asked = alts[0]; try { for (const a of alts) { if (await navCmd(n, norm(a))) return; } sound('err'); } finally { busy = false; } };
-  const L = t.dest.id - t.origin.id; S.ans = null; drawTrip();
-  if (n.sim) {
+  const L = t.dest.id - (n.idx + 1); S.ans = null; saveTrip({ origin: n.origin.id, dest: n.dest.id, idx: n.idx, sim: n.sim }); drawTrip();
+  if (n.sim && rs) {
+    await speak('Retomando o trajeto até ' + nm(t.dest) + '. Você está na parada ' + nm(STOPS[n.idx]) + '. Faltam ' + pl(L, 'parada', 'paradas') + ' até o destino. Atenção: você está no modo simulação.');
+    schedule(n);
+  } else if (n.sim) {
     await speak('Perfeito. Simulando o trajeto da linha 875C-10 até ' + nm(t.dest) + '. Você está na parada ' + nm(t.origin) + '. Faltam ' + pl(L, 'parada', 'paradas') + ' até o destino. Atenção: você está no modo simulação.');
     schedule(n);
   } else {
     watch = navigator.geolocation.watchPosition(p => watchTick(n, p.coords), e => { if (e.code === 1) { n.paused = true; speak('A permissão de localização foi retirada. Diga modo real quando liberar, ou ativar simulação.'); } }, { enableHighAccuracy: true, maximumAge: 2000, timeout: 20000 });
-    await speak('Navegação iniciada até ' + nm(t.dest) + ', linha 875C-10. Faltam ' + pl(L, 'parada', 'paradas') + '. Eu aviso cada parada pelo GPS. Diga ajuda para ouvir os comandos.');
+    await speak(rs ? 'Retomando o trajeto até ' + nm(t.dest) + '. Você estava na parada ' + nm(STOPS[n.idx]) + '. Faltam ' + pl(L, 'parada', 'paradas') + '. Eu aviso cada parada pelo GPS.' : 'Navegação iniciada até ' + nm(t.dest) + ', linha 875C-10. Faltam ' + pl(L, 'parada', 'paradas') + '. Eu aviso cada parada pelo GPS. Diga ajuda para ouvir os comandos.');
   }
   const r = await finished;
   clearTimeout(n.timer); if (watch != null) navigator.geolocation.clearWatch(watch); try { wl && wl.release(); } catch (e) {}
@@ -450,39 +636,56 @@ async function runTrip(t) {
 }
 
 /* ---------- ciclo principal ---------- */
-async function mainLoop(first) {
+async function mainLoop(first, saved, greet) {
   for (;;) {
-    const trip = await planTrip(first); first = null;
+    let trip;
+    if (saved) {
+      const s = saved; saved = null;
+      if (await offerResume(greet, s)) {
+        S.sim = !!s.sim; S.modeChosen = true; setSimBanner();
+        trip = { origin: STOPS[s.origin - 1], dest: STOPS[s.dest - 1], walk: s.phase === 'walk', resume: s.phase === 'ride' ? s : null };
+        if (trip.walk) { trip.origin.dist = null; }
+      } else first = 'Tudo bem. O trajeto anterior foi descartado. Para onde você gostaria de ir hoje?';
+    }
+    if (!trip) { trip = await planTrip(first); }
+    first = null;
+    if (trip.walk) {
+      saveTrip({ origin: trip.origin.id, dest: trip.dest.id, idx: trip.origin.id - 1, sim: false, phase: 'walk' });
+      const r = await walkToStop(trip.origin); if (r !== 'arrived') { clearTrip(); first = 'Para onde você gostaria de ir?'; continue; }
+    }
     await runTrip(trip); /* a tela de chegada fica visível durante a pergunta */
     const again = await ask('Quer fazer uma nova viagem? Diga novo destino, ou encerrar guia.', n => /\b(encerrar|encerra|nao|sair|fim)\b/.test(n) ? false : /\b(novo|nova|outro|outra|sim|quero|destino)\b/.test(n) ? true : undefined, { view: 'keep' });
     if (!again) await ask('Tudo bem. Estou ouvindo. Diga Para onde vou, quando quiser ir a algum lugar.', n => /\b(para onde|destino|viagem|ir|quero|guia|comecar)\b/.test(n) ? true : undefined, { wait: 45000 });
     first = 'Para onde você gostaria de ir?';
   }
 }
-/* Ao abrir, já começa: verifica perfil e permissões em silêncio e fala na hora. Sem pergunta de permissão, sem "Diga Começar". */
+/* Saudação pelo horário: 05–12 bom dia, 12–18 boa tarde, 18–05 boa noite. */
+function saudacao(d) { const h = (d || new Date()).getHours(); return h >= 5 && h < 12 ? 'Bom dia' : h >= 12 && h < 18 ? 'Boa tarde' : 'Boa noite'; }
+/* Memória: antes de falar qualquer coisa, verifica em silêncio perfil, microfone e localização. */
 async function boot() {
   show('say'); setState('idle');
   if (!SR) { setCaption('Este navegador não tem reconhecimento de voz. Abra o GuIa no Chrome.'); await speak('Este navegador não tem reconhecimento de voz. Abra o Guia no Chrome do Android ou do computador.'); return; }
   const profile = store.get('profile');
-  if (prefs.vib === undefined) prefs.vib = true;
-  if (prefs.notif === undefined) prefs.notif = false;
   const [mic, geo] = await Promise.all([permState('microphone'), permState('geolocation')]);
   if (mic === 'granted') { S.micOK = true; startRec(); }
   if (geo === 'granted') S.geoOK = true;
-  const micReq = S.micOK ? Promise.resolve(true) : requestMic(); /* o aviso do navegador aparece enquanto o Guia já está falando */
-  const hello = profile ? 'Bem-vindo de volta, ' + profile.name + '. Estou ouvindo.' : 'Bem-vindo ao Guia. Estou ouvindo.';
-  let spoke = false;
-  if (!S.micOK) { await speak(hello); spoke = true; if (!(await micReq)) await ensureMic(); show('say'); }
-  sound('ok');
-  /* localização: pedida ao navegador em segundo plano; se for negada, o Guia oferece a simulação só quando for preciso */
-  if (!S.geoOK && navigator.geolocation) getPos(20000).then(() => { S.geoOK = true; }, () => {});
-  if (profile) return mainLoop(spoke ? 'Para onde você gostaria de ir hoje?' : hello + ' Para onde você gostaria de ir hoje?');
-  if (!spoke) await speak(hello);
-  await register();
-  return mainLoop('Para onde você deseja ir?');
+  const greet = profile ? saudacao() + ', ' + profile.name + '.' : 'Bem-vindo ao Guia.';
+  if (profile && S.micOK && S.geoOK) { /* recorrente com tudo autorizado: pula cadastro e permissões */
+    if (prefs.vib === undefined) prefs.vib = true; if (prefs.notif === undefined) prefs.notif = false;
+    sound('ok'); const sv = validTrip();
+    return sv ? mainLoop(null, sv, greet) : mainLoop(greet + ' Estou ouvindo. Para onde você gostaria de ir hoje?');
+  }
+  await speak(greet + ' Estou ouvindo.');
+  if (!S.micOK) await ensureMic();
+  if (!S.geoOK) await ensureGeo();
+  await ensureExtras();
+  if (!profile) await register();
+  const sv2 = profile ? validTrip() : null;
+  return mainLoop(profile ? 'Para onde você gostaria de ir hoje?' : 'Para onde você deseja ir?', sv2, '');
 }
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 window.addEventListener('load', () => boot().catch(e => { console.error(e); setCaption('Algo falhou. Recarregue a página.'); }));
-window.Guia = { S, STOPS, deliver, findStops, store, speak, show, setState };
+window.Guia = { validTrip, setDial: f => { dialFn = f; }, saudacao, E, S, STOPS, deliver, findStops, store, speak, show, setState };
 </script>
 </body>
 </html>
