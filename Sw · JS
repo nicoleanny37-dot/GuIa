@@ -1,6 +1,6 @@
 /* GuIa — Service Worker: faz o app abrir e funcionar sem internet.
    Tudo que o app precisa (código, paradas da linha 875C-10, ícones) fica em cache. */
-const VERSION = 'guia-v5';
+const VERSION = 'guia-v11';
 const SHELL = ['./', 'index.html', 'linha875c10.js', 'manifest.json', 'icon-192.png', 'icon-512.png', 'icon-180.png', 'icon-maskable-512.png'];
 
 self.addEventListener('install', e => {
