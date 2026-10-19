@@ -106,10 +106,14 @@ body[data-s=listening] .mic::after{animation:ring 1.6s ease-out .8s infinite}
 .loc{display:flex;gap:12px;align-items:center;border:2px solid var(--line);border-radius:16px;padding:12px 14px;font-size:15px}
 .loc .ic{font-size:26px}.loc b{display:block;font-size:15px}.loc small{display:block;color:var(--muted);font-size:13px;font-weight:500}
 .loc.real{border-color:var(--ok)}.loc.real b{color:var(--ok)}
+/* botão real "Ligar": único elemento tocável do app, usado só na emergência (alternativa à voz, fora do aria-hidden) */
+.emgcall{margin:0 24px calc(22px + env(safe-area-inset-bottom,0px));pointer-events:auto;text-decoration:none;flex:none}
+.emgcall:focus-visible{outline:4px solid var(--text);outline-offset:3px}
+.emgcall[hidden]{display:none}
 </style>
 </head>
 <body>
-<div class="stage"><div class="phone" id="phone"><div class="view" id="view" aria-hidden="true"></div></div></div>
+<div class="stage"><div class="phone" id="phone"><div class="view" id="view" aria-hidden="true"></div><a class="btn emgcall" id="emgcall" href="#" hidden></a></div></div>
 <script>
 /* ==========================================================================
    linha875c10.js — ARQUIVO MESTRE DE TRAJETO da linha 875C-10
@@ -384,7 +388,6 @@ function validarLinha() {
 if (typeof module !== "undefined") {
   module.exports = { LINHA_875C10, normalizar, buscarParada, buscarParadasMultiplas, reconhecerParada, escolherEntre, calcularTrajeto, proximaParada, paradaAnterior, quantasFaltam, listarParadas, validarLinha };
 }
-
 </script>
 <script>
 /* Fonte da previsão dos ônibus (tempo real). Cole aqui o endereço do intermediário (veja previsao-worker.js). Vazio = sem previsão. */
@@ -392,7 +395,8 @@ window.GUIA_CONFIG = window.GUIA_CONFIG || { previsaoUrl: 'https://guia-previsao
 </script>
 <script>
 'use strict';
-/* GuIa — interação 100% por voz. Sem botões, sem campos, sem links. A tela só espelha o que o Guia fala (aria-hidden: leitores de tela não duplicam a voz). */
+/* GuIa — interação 100% por voz. Sem botões, sem campos, sem links. A tela só espelha o que o Guia fala (aria-hidden: leitores de tela não duplicam a voz).
+   Única exceção: na emergência aparece um botão real "Ligar", como alternativa à voz (fora do aria-hidden, acessível ao leitor de tela). */
 /* A ordem e os dados das 46 paradas vêm do arquivo mestre linha875c10.js */
 const STOPS = LINHA_875C10.paradas;
 const nm = s => s.nome_curto;
@@ -400,13 +404,20 @@ const $ = id => document.getElementById(id);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const norm = t => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
 const pl = (n, a, b) => n + ' ' + (n === 1 ? a : b);
-const S = { sim: false, modeChosen: false, nav: null, micOK: false, geoOK: false, blocked: false };
+const S = { sim: false, modeChosen: false, nav: null, micOK: false, geoOK: false, blocked: false, hold: false, bus: null };
 const store = {
   get(k) { try { return JSON.parse(localStorage.getItem('guia.' + k)); } catch (e) { return null; } },
   set(k, v) { try { localStorage.setItem('guia.' + k, JSON.stringify(v)); } catch (e) {} },
   del(k) { try { localStorage.removeItem('guia.' + k); } catch (e) {} }
 };
 let prefs = store.get('prefs') || {};
+
+/* ---------- contato de segurança (emergência) e ônibus simulado ---------- */
+/* Número exibido na tela, número lido em voz alta (dígito a dígito, com pausas) e número do discador. */
+const EMG = { exibir: '(11) 99906-7415', falar: 'onze, nove nove nove zero seis, sete quatro um cinco', tel: '+5511999067415' };
+/* Previsão SIMULADA do ônibus. segPorMin = segundos reais de cada minuto simulado (6 = demonstração acelerada; 60 = tempo real).
+   O relógio simulado para enquanto o Guia fala. Não existe ligação com dados reais aqui: tudo é identificado como simulado. */
+const BUS = { minutos: 5, segPorMin: 6, linha: '875C-10', sentido: 'Metrô Santa Cruz' };
 
 /* ---------- tela: telas dos mockups (ouvindo, confirmação, trajeto, ônibus chegando, chegada). Só espelha a voz; nada é tocável. ---------- */
 const IC = { mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>', bus: '<rect x="4" y="3" width="16" height="14" rx="3"/><path d="M4 11h16M8 17v3M16 17v3"/><circle cx="8" cy="14" r=".6"/><circle cx="16" cy="14" r=".6"/>', check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>', pin: '<path d="M12 21s7-6.2 7-11a7 7 0 0 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/>', vol: '<path d="M4 10v4h3l4 3V7l-4 3H4z"/><path d="M15 9a4 4 0 0 1 0 6M17.5 6.5a8 8 0 0 1 0 11"/>', alert: '<path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17v.5"/>', clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', bars: '<path d="M6 10v4M10 6v12M14 9v6M18 7v10"/>', pencil: '<path d="M4 20l4-1L19 8l-3-3L5 16z"/>', vib: '<rect x="8" y="4" width="8" height="16" rx="2"/><path d="M4 8v8M20 8v8"/>', phone: '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/>', shield: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M12 8v5M12 16v.5"/>' };
@@ -434,12 +445,14 @@ function setHeard(t) { S.heard = t; const e = document.querySelector('[data-hear
 function setSimBanner() { if (S.view && !((S.view === 'route' || S.view === 'near') && !S.nav)) show(S.view, S.vdata); }
 function show(name, d) {
   if ((name === 'route' || name === 'near') && !S.nav) name = 'say';
-  const isEmg = name === 'emg1' || name === 'emg2';
+  const isEmg = name === 'emg';
   if (S.emg && S.emg.phase && !isEmg) { S.view = name; S.vdata = d || {}; return; }
   if (!isEmg) { S.view = name; S.vdata = d || {}; d = S.vdata; } else d = d || {};
   const ph = $('phone'), v = $('view');
-  ph.className = 'phone' + (name === 'near' ? ' tone-yellow' : name === 'arrive' ? ' tone-mint' : name === 'emg2' ? ' tone-red' : '');
-  const snd = '<p class="fine">' + ic('vol') + (prefs.vib === false ? 'Som ativo' : ic('vib') + 'Som e vibração ativos') + '</p>';
+  const busWarm = name === 'bus' && S.bus && S.bus.ph !== 'far';
+  ph.className = 'phone' + (name === 'near' || busWarm ? ' tone-yellow' : name === 'arrive' ? ' tone-mint' : name === 'emg' ? ' tone-red' : '');
+  const vst = vibStatus();
+  const snd = '<p class="fine">' + ic('vol') + (vst === 'disponivel' ? ic('vib') + 'Som e vibração ligados' : vst === 'desligada' ? 'Som ativo · vibração desligada' : vst === 'sem-suporte' ? 'Som ativo · sem vibração neste aparelho' : 'Som ativo · toque na tela para liberar a vibração') + '</p>';
   const micPill = '<div class="btn">' + ic('mic') + '<span data-pill-txt>' + PILL[S.st || 'idle'][0] + '</span></div>';
   let h = '';
   if (name === 'perm') {
@@ -447,15 +460,29 @@ function show(name, d) {
     h = simNote() + '<div class="top">' + LOGO + '' + pillHTML() + '</div><h1 class="h1 big" style="margin-top:8px">Antes de sair, duas permissões</h1>' +
       '<div class="cards">' + row('pin', 'Localização', 'Para saber onde você está e avisar a hora de descer.', S.geoOK || S.sim) + row('mic', 'Microfone', 'Para ouvir seu destino e suas perguntas.', S.micOK) + '</div>' +
       '<div class="grow"></div><p class="sub strong" data-cap>' + esc(S.cap || '') + '</p><p class="sub">Responda por voz: sim ou não.</p>';
-  } else if (name === 'emg1') {
-    const e = S.emg, pct = Math.max(0, e.left / 20) * 360;
-    h = '<div class="top">' + LOGO + '<span class="pill red">' + ic('alert') + 'Palavra ouvida 1 vez</span></div><div class="grow"></div>' +
-      '<div class="ring" style="--p:' + pct + 'deg"><div><b>' + e.left + '</b><small>segundos</small></div></div>' +
-      '<h1 class="h1 big c">Diga de novo para ligar para o 190</h1><p class="sub c">Se não repetir, nada acontece.</p><div class="grow"></div><div class="btn o">Diga: foi sem querer</div>';
-  } else if (name === 'emg2') {
-    const e = S.emg, wh = emgWhere();
-    h = '<span class="badge-top">' + ic('shield') + 'Emergência</span><div class="grow"></div><div class="big-badge" aria-hidden="true">' + ic('phone') + '</div>' +
-      '<h1 class="h1 big c">Ligando para o 190</h1><p class="sub strong c">Em ' + e.left + ' segundos.' + (wh ? '<br>' + esc(wh) : '') + '</p><div class="grow"></div><div class="btn o">Diga: cancelar</div><p class="sub c" style="font-size:16px">Ou diga “cancelar”.</p>';
+  } else if (name === 'emg') {
+    const e = S.emg, sim = !!(S.sim || (S.nav && S.nav.sim)), abrindo = e.step === 'dialing';
+    const num = e.dialed === '190' ? 'Polícia: 190' : EMG.exibir;
+    h = '<span class="badge-top">' + ic('shield') + (sim ? 'Simulação de emergência' : 'Emergência') + '</span><div class="grow"></div><div class="big-badge" style="margin:8px auto 20px" aria-hidden="true">' + ic('phone') + '</div>' +
+      '<h1 class="h1 big c">Alerta de emergência ativado</h1><p class="sub strong c">' + (abrindo ? 'Abrindo o discador…<br>Diga “foi sem querer” para cancelar.' : 'Discador aberto. Toque em ligar para completar a chamada.') + '</p><p class="h1 s c" style="margin:0">' + esc(num) + '</p>' +
+      '<p class="sub c" style="font-size:15px;color:var(--text)">' + (sim ? 'Simulação, mas o número é real. ' : '') + 'A ligação só acontece se você tocar em ligar. O GuIa não envia localização nem mensagens.</p>' +
+      '<div class="grow"></div><div class="btn o">Diga: estou seguro</div><p class="sub c" style="font-size:15px">Diga “repetir” para ouvir de novo.</p>';
+  } else if (name === 'bus') {
+    const b = S.bus || {}, bp = b.ph || 'far', m = Math.max(0, Math.ceil(b.left || 0)), pct = Math.round(Math.max(0, Math.min(1, 1 - (b.left || 0) / BUS.minutos)) * 360);
+    const tag = '<p class="sim">Previsão simulada: não são dados reais do ônibus.</p>';
+    if (bp === 'far') {
+      h = simNote() + tag + '<div class="head"><span class="bb">' + ic('bus') + '</span><h1>Ônibus a caminho</h1></div>' +
+        '<p class="sub" style="color:var(--text)">Linha ' + esc(BUS.linha) + ' · sentido ' + esc(BUS.sentido) + '</p>' +
+        '<div class="ring" style="--p:' + pct + 'deg;background:conic-gradient(var(--ok) var(--p),var(--line) 0)"><div><b>' + m + '</b><small>min (simulado)</small></div></div>' +
+        '<ol class="tl"><li><span class="node pin">' + ic('pin') + '</span><div><small>PONTO · EMBARQUE</small><b>' + esc(b.stop ? nm(b.stop) : '') + '</b></div></li></ol>' +
+        '<div class="tip"><b>Ao embarcar</b>Cuidado com o degrau e segure no corrimão.</div><div class="grow"></div><div class="acts">' + micPill + '</div>' + snd;
+    } else {
+      const near = bp === 'near';
+      h = '<span class="badge-top">' + ic('alert') + 'Atenção</span>' + simNote() + tag + '<div class="grow"></div><div class="big-badge" aria-hidden="true">' + ic('bus') + '</div>' +
+        '<h1 class="h1 big c">' + (near ? 'Ônibus quase chegando' : 'Seu ônibus chegou') + '</h1>' +
+        '<p class="sub strong c">' + (near ? 'Previsão simulada: cerca de 1 minuto<br>Prepare-se para embarcar' : 'Confirme a linha ' + esc(BUS.linha) + ' com o motorista') + '</p>' +
+        '<div class="tip"><b>Ao subir</b>Cuidado com o degrau e segure no corrimão.</div><div class="grow"></div><div class="acts">' + micPill + '</div>' + snd;
+    }
   } else if (name === 'walk') {
     const w = S.walk || {};
     h = simNote() + '<div class="head"><span class="bb">' + PERSON + '</span><h1>Vá até o ponto</h1></div>' +
@@ -489,8 +516,11 @@ function show(name, d) {
     const items = [];
     if (n.idx > n.origin.id - 1) items.push('<li class="done"><span class="node ok">' + ic('check') + '</span><div><b>' + esc(nm(n.origin)) + '</b><small>Embarque · feito</small></div></li>');
     items.push('<li><span class="node here"></span><div><small>' + (n.paused ? 'PAUSADO · VOCÊ ESTÁ AQUI' : 'VOCÊ ESTÁ AQUI') + '</small><b>' + esc(nm(s)) + '</b></div></li>');
-    if (l > 1) items.push('<li><span class="node"></span><div><small>+ ' + (l - 1) + (l - 1 === 1 ? ' parada' : ' paradas') + '</small></div></li>');
-    items.push('<li><span class="node pin">' + ic('pin') + '</span><div><small>DESTINO · DESÇA AQUI</small><b>' + esc(nm(n.dest)) + '</b></div></li>');
+    const nx = STOPS[n.idx + 1], aprox = !!(nx && n.eventos && n.eventos.has('aproximacao:' + nx.id));
+    const resto = k => k > 0 ? '<li><span class="node"></span><div><small>+ ' + k + (k === 1 ? ' parada' : ' paradas') + '</small></div></li>' : '';
+    if (aprox && nx.id !== n.dest.id) items.push('<li><span class="node"></span><div><small>PRÓXIMA · APROXIMANDO</small><b>' + esc(nm(nx)) + '</b></div></li>' + resto(l - 2));
+    else items.push(resto(l - 1));
+    items.push('<li><span class="node pin">' + ic('pin') + '</span><div><small>' + (aprox && nx.id === n.dest.id ? 'APROXIMANDO · DESÇA AQUI' : 'DESTINO · DESÇA AQUI') + '</small><b>' + esc(nm(n.dest)) + '</b></div></li>');
     h = simNote() + '<div class="head"><span class="bb">' + ic('bus') + '</span><h1>Faltam ' + l + (l === 1 ? ' parada' : ' paradas') + '</h1></div>' +
       '<p class="sub" style="color:var(--text)">Você está no ônibus 875C-10 · cerca de ' + mins + ' min</p><ol class="tl">' + items.join('') + '</ol>' +
       (S.ans ? '<div class="ans"><small class="lbl">Você perguntou</small><q>“' + esc(S.ans.q) + '”</q><small class="lbl">Resposta</small><p>' + esc(S.ans.a) + '</p></div>' : '') +
@@ -498,7 +528,7 @@ function show(name, d) {
   } else if (name === 'near') {
     const n = S.nav;
     h = '<span class="badge-top">' + ic('alert') + 'Atenção</span>' + simNote() + '<div class="grow"></div><div class="big-badge" aria-hidden="true">' + ic('bus') + '</div>' +
-      '<h1 class="h1 big c">Desça na próxima parada</h1><p class="sub strong c">' + esc(nm(n.dest)) + '<br>Prepare-se para desembarcar</p><div class="grow"></div><div class="acts">' + micPill + '</div>' + snd;
+      '<h1 class="h1 big c">Desça na próxima parada</h1><p class="sub strong c">' + (n.eventos && n.eventos.has('aproximacao:' + n.dest.id) ? 'Aproximando de ' : '') + esc(nm(n.dest)) + '<br>Prepare-se para desembarcar</p><div class="grow"></div><div class="acts">' + micPill + '</div>' + snd;
   } else if (name === 'arrive') {
     h = simNote() + '<div class="grow"></div><div class="big-badge" aria-hidden="true">' + ic('check') + '</div><h1 class="h1 big c">Você chegou</h1><p class="bold c" style="margin:0;font-weight:800;font-size:22px;text-align:center">' + esc(d.dest) + '</p>' +
       '<p class="sub strong c" style="font-size:17px">' + (d.sim ? 'Fim da simulação.' : 'Confira com o motorista antes de descer.') + '</p><div class="grow"></div>' +
@@ -511,9 +541,54 @@ function setTrip() { if (S.nav && S.nav.phase !== 'done') show(S.nav.dest.id - S
 /* ---------- sons e vibração ---------- */
 let actx = null;
 function tone(f, d, at) { try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); const o = actx.createOscillator(), g = actx.createGain(); o.frequency.value = f; g.gain.setValueAtTime(.0001, actx.currentTime + at); g.gain.exponentialRampToValueAtTime(.25, actx.currentTime + at + .01); g.gain.exponentialRampToValueAtTime(.0001, actx.currentTime + at + d); o.connect(g); g.connect(actx.destination); o.start(actx.currentTime + at); o.stop(actx.currentTime + at + d + .02); } catch (e) {} }
-const SND = { listen: [[880, .08]], ok: [[660, .1], [880, .14]], err: [[240, .25]], pass: [[620, .09]], near: [[700, .1], [700, .1], [700, .1]], arrive: [[523, .15], [659, .15], [784, .3]], emg1: [[520, .12], [520, .12], [520, .12]], emg2: [[880, .3], [660, .3], [880, .3], [660, .3]] };
-const VIB = { ok: [100], err: [300], pass: [100], near: [100, 80, 100, 80, 100], arrive: [400, 100, 100, 100, 100], emg1: [100, 80, 100, 80, 100], emg2: [400, 100, 400, 100, 400, 100, 400] };
-function sound(n) { if (S.emg && S.emg.phase === 'one' && ['listen', 'ok', 'err', 'pass', 'near'].indexOf(n) >= 0) return; let t = 0; (SND[n] || []).forEach(p => { tone(p[0], p[1], t); t += p[1] + .04; }); if (prefs.vib !== false && VIB[n] && navigator.vibrate) { try { navigator.vibrate(VIB[n]); } catch (e) {} } }
+/* Cada aviso tem um som e um padrão de vibração próprios. A vibração só complementa a voz, nunca a substitui. */
+const SND = { listen: [[880, .08]], ok: [[660, .1], [880, .14]], err: [[240, .25]], pass: [[620, .09]], near: [[700, .1], [700, .1], [700, .1]], arrive: [[523, .15], [659, .15], [784, .3]],
+  busCome: [[587, .12], [740, .12], [880, .2]], busNear: [[880, .09], [880, .09], [880, .09], [1175, .22]], busHere: [[784, .14], [988, .14], [784, .14], [988, .14], [1319, .4]],
+  emg1: [[520, .12], [520, .12], [520, .12]], emg2: [[880, .2], [660, .2], [880, .2]],
+  /* sons dos eventos do trajeto: mesmo ritmo do padrão de vibração correspondente */
+  ev_aproximacao: [[660, .12]], ev_chegada: [[620, .1], [620, .1]], ev_preparacao: [[520, .35], [700, .1]], ev_destino: [[523, .12], [659, .12], [784, .25]], ev_atencao: [[700, .1], [700, .1], [440, .35]] };
+const VIB = { ok: [100], err: [300], pass: [100], near: [100, 80, 100, 80, 100], arrive: [400, 100, 100, 100, 100],
+  busCome: [150, 100, 150], busNear: [100, 70, 100, 70, 100, 70, 300], busHere: [600, 150, 600],
+  emg1: [100, 80, 100, 80, 100], emg2: [400, 100, 400, 100, 400, 100, 400] };
+const SND_CALADOS_NA_EMERGENCIA = ['listen', 'ok', 'err', 'pass', 'near', 'busCome', 'busNear', 'busHere', 'ev_aproximacao', 'ev_chegada', 'ev_preparacao', 'ev_destino', 'ev_atencao'];
+/* Um sinal de trajeto em andamento não é atropelado pela vibração curta de "ok/erro" (só a emergência interrompe). */
+function sound(n) { if (S.emg && S.emg.phase && SND_CALADOS_NA_EMERGENCIA.indexOf(n) >= 0) return; let t = 0; (SND[n] || []).forEach(p => { tone(p[0], p[1], t); t += p[1] + .04; }); if (prefs.vib !== false && VIB[n] && typeof navigator.vibrate === 'function' && (!(S.vibAte > Date.now()) || /^emg/.test(n))) { try { navigator.vibrate(VIB[n]); } catch (e) {} } }
+
+/* ---------- vibração por evento do trajeto: padrões centralizados (ajuste aqui) ----------
+   curta = 250 ms, longa = 900 ms, pausa = 300 ms: intervalos longos o bastante para contar os pulsos. */
+const PADROES_VIBRACAO = {
+  aproximacao: { padrao: [250], nome: 'uma vibração curta', evento: 'aproximação da parada' },
+  chegada: { padrao: [250, 300, 250], nome: 'duas vibrações curtas', evento: 'chegada à parada' },
+  preparacao: { padrao: [900, 300, 250], nome: 'uma vibração longa e uma curta', evento: 'preparação para desembarque' },
+  destino: { padrao: [250, 300, 250, 300, 250], nome: 'três vibrações curtas', evento: 'chegada ao destino' },
+  atencao: { padrao: [250, 300, 250, 300, 900], nome: 'duas vibrações curtas e uma longa', evento: 'atenção' }
+};
+const duracaoPadrao = p => p.reduce((a, b) => a + b, 0);
+/** Estado da vibração: disponivel | desligada (escolha da pessoa) | sem-suporte (sem a API, ex.: iPhone) | bloqueada (o navegador exige um toque na tela). */
+function vibStatus() {
+  if (prefs.vib === false) return 'desligada';
+  if (typeof navigator === 'undefined' || typeof navigator.vibrate !== 'function') return 'sem-suporte';
+  if (S.vibRecusada || (navigator.userActivation && navigator.userActivation.hasBeenActive === false)) return 'bloqueada';
+  return 'disponivel';
+}
+/** Pede ao aparelho o padrão do evento. "pedida" só quer dizer que o navegador aceitou o pedido: a API não confirma que o motor vibrou. */
+function vibrar(tipo) {
+  const p = PADROES_VIBRACAO[tipo]; if (!p) return { pedida: false, estado: 'padrao-desconhecido' };
+  if (prefs.vib === false) return { pedida: false, estado: 'desligada' };
+  if (typeof navigator.vibrate !== 'function') return { pedida: false, estado: 'sem-suporte' };
+  if (navigator.userActivation && navigator.userActivation.hasBeenActive === false) return { pedida: false, estado: 'bloqueada' };
+  let r = false; try { r = navigator.vibrate(p.padrao); } catch (e) { r = false; } /* um novo padrão substitui o que estiver pendente */
+  S.vibRecusada = r === false;
+  if (r === false) return { pedida: false, estado: 'bloqueada' };
+  S.vibAte = Date.now() + duracaoPadrao(p.padrao);
+  return { pedida: true, estado: 'pedida' };
+}
+function cancelarVibracao() { S.vibAte = 0; try { if (typeof navigator.vibrate === 'function') navigator.vibrate(0); } catch (e) {} }
+function textoSemVibracao(estado) {
+  if (estado === 'sem-suporte') return 'A vibração não está disponível neste dispositivo. Vou continuar orientando você por áudio.';
+  if (estado === 'bloqueada') return 'O navegador ainda não liberou a vibração. Para liberar, toque uma vez em qualquer lugar da tela. Enquanto isso, vou continuar orientando você por áudio.';
+  return '';
+}
 function notify(title, body) { try { if (prefs.notif && window.Notification && Notification.permission === 'granted') new Notification(title, { body, silent: true }); } catch (e) {} }
 
 /* ---------- fala (SpeechSynthesis) ---------- */
@@ -524,7 +599,7 @@ let lastEnd = 0;
 function speak(text, o) {
   return new Promise(res => {
     S.lastSpoken = norm(text);
-    if (S.emg && S.emg.phase && !(o && o.force)) { res(); return; } /* na emergência não há fala, para não alertar quem está por perto */
+    if (S.emg && S.emg.phase && !(o && o.force)) { res(); return; } /* durante o alerta de emergência só falam as mensagens da própria emergência (force) */
     setCaption(text); const my = ++spTok; speaking = true; setState('speaking');
     let done = false, wd;
     const fin = () => { if (done) return; done = true; clearTimeout(wd); if (my === spTok) { speaking = false; lastEnd = Date.now(); setState(recRunning ? 'listening' : 'idle'); startRec(); } res(); };
@@ -537,7 +612,10 @@ function speak(text, o) {
   });
 }
 /* Alguns navegadores só liberam a voz depois do primeiro gesto na página. Se isso acontecer, qualquer toque ou tecla libera; o Guia repete sozinho. */
-['pointerdown', 'keydown', 'touchstart'].forEach(ev => addEventListener(ev, () => { try { actx && actx.resume(); } catch (e) {} speechBlocked = false; }, { passive: true }));
+['pointerdown', 'keydown', 'touchstart'].forEach(ev => addEventListener(ev, () => { try { actx && actx.resume(); } catch (e) {} speechBlocked = false;
+  S.vibRecusada = false; /* o toque costuma liberar a vibração no Chrome */
+  const n = S.nav; if (n && n.avisoVib === 'bloqueada' && vibStatus() === 'disponivel') { n.avisoVib = 'liberada'; speak('Toque recebido. A partir de agora, as paradas também vão vibrar, se o seu aparelho permitir.'); }
+}, { passive: true }));
 
 /* ---------- escuta (SpeechRecognition): sempre ativa, inclusive enquanto o Guia fala (para a palavra de emergência) ---------- */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -547,16 +625,26 @@ function startRec() {
   const r = new SR(); r.lang = 'pt-BR'; r.continuous = true; r.interimResults = false; r.maxAlternatives = 3; rec = r;
   try { if ('processLocally' in r) r.processLocally = !navigator.onLine && !S.noLocal; } catch (e) {} /* sem internet, usa o reconhecimento do próprio aparelho, se houver */
   r.onstart = () => { recRunning = true; if (!speaking) setState('listening'); };
-  r.onresult = e => { for (let i = e.resultIndex; i < e.results.length; i++) if (e.results[i].isFinal) { const alts = Array.from(e.results[i]).map(a => a.transcript).filter(Boolean); if (alts.length) deliver(alts); } };
+  r.onspeechstart = () => { if (!speaking) S.ouvindoFala = Date.now(); }; /* a pessoa começou a falar: os avisos da simulação esperam */
+  r.onspeechend = () => { S.ouvindoFala = 0; };
+  r.onresult = e => { S.ouvindoFala = 0; for (let i = e.resultIndex; i < e.results.length; i++) if (e.results[i].isFinal) { const alts = Array.from(e.results[i]).map(a => a.transcript).filter(Boolean); if (alts.length) deliver(alts); } };
   r.onerror = e => { if (e.error === 'language-not-supported') S.noLocal = true; if (e.error === 'not-allowed' || e.error === 'service-not-allowed') { S.micOK = false; S.blocked = true; setState('blocked'); } };
-  r.onend = () => { if (rec !== r) return; recRunning = false; if (S.micOK) setTimeout(startRec, 250); };
+  r.onend = () => { S.ouvindoFala = 0; if (rec !== r) return; recRunning = false; if (S.micOK) setTimeout(startRec, 250); };
   try { r.start(); recRunning = true; } catch (e) { recRunning = false; }
 }
 function stopRec() { const r = rec; rec = null; recRunning = false; if (r) { r.onend = r.onresult = r.onerror = r.onstart = null; try { r.abort(); } catch (e) {} } }
-/* ---------- palavra de emergência: a palavra-chave do cadastro, em qualquer estado do app ---------- */
-const E = { phase: null, left: 0, iv: null }; S.emg = E;
-const EMG_CANCEL = /\b(cancelar|cancela|cancele|foi sem querer|sem querer|nao precisa)\b/;
-let dialFn = n => { location.href = 'tel:' + n; };
+
+/* ---------- emergência: palavra-chave cadastrada OU pedido de ajuda falado, em qualquer estado do app ----------
+   Fluxo: som + vibração própria → frase curta → abre o discador do telefone direto (modo real e simulação, sem confirmação).
+   A chamada só se completa quando a pessoa toca em ligar. O GuIa não envia localização nem mensagens (ainda não implementado) e diz isso em voz alta. */
+const E = { phase: null, step: null, dialed: null, resumeNav: false, busy: false, tok: 0, src: '' }; S.emg = E;
+const RE_SOCORRO = /\b(preciso de ajuda|preciso de socorro|estou em perigo|to em perigo|tou em perigo|socorro|chamar ajuda|pedir ajuda|emergencia|estou sendo (seguid|ameacad|assaltad|persegui)\w*)\b/;
+const RE_FIM = /\b(estou seguro|estou segura|foi sem querer|sem querer|esta tudo bem|encerrar|encerra|cancelar|cancela|nao preciso|ja passou|pode parar)\b/;
+const RE_PARE = /\b(foi sem querer|sem querer|cancelar|cancela|pare|parar)\b/;
+const RE_REP = /\b(repetir|repete|de novo|ouvir de novo|ajuda|opcoes)\b/;
+const RE_POL = /\b(policia|cento e noventa|190)\b/;
+const RE_LIGA = /\b(ligar|liga|ligue|discador|chamar)\b/;
+let dialFn = n => { location.href = 'tel:' + n; }; /* abre o discador do aparelho; quem completa a chamada é a pessoa, tocando em ligar */
 const hcache = new Map();
 async function hashOf(c, salt) { const k = salt + c; if (!hcache.has(k)) hcache.set(k, await sha(c, salt)); return hcache.get(k); }
 async function emgMatch(alts) {
@@ -569,29 +657,79 @@ async function emgMatch(alts) {
   }
   return false;
 }
-function emgWhere() { const n = S.nav; if (n) return 'Você está na parada ' + nm(STOPS[n.idx]) + ', no ônibus 875C-10.'; return ''; }
-function emgReset() { clearInterval(E.iv); E.phase = null; E.left = 0; try { speechSynthesis.cancel(); } catch (e) {} show(S.view || 'say', S.vdata); }
-function emgCancel() { emgReset(); sound('ok'); speak('Emergência cancelada.'); }
-function emgTick() {
-  E.left--;
-  if (E.left > 0) return show(E.phase === 'one' ? 'emg1' : 'emg2');
-  if (E.phase === 'one') return emgReset();
-  clearInterval(E.iv); E.phase = null; E.left = 0;
-  try { dialFn('190'); } catch (e) {}
-  setTimeout(() => show(S.view || 'say', S.vdata), 800);
+const emgSim = () => !!(S.sim || (S.nav && S.nav.sim));
+const emgSay = t => speak(t, { force: true });
+const echoWords = () => (Date.now() - lastEnd < 900 || speaking) ? (S.lastSpoken || '').split(' ') : null;
+const echoText = n => (speaking || Date.now() - lastEnd < 2500) && (S.lastSpoken || '').indexOf(n) >= 0; /* o Guia acabou de dizer essa frase: é eco, não pedido de ajuda */
+/** Botão real "Ligar": alternativa tocável (e acessível ao leitor de tela) à confirmação por voz. */
+function emgLink(on) {
+  const a = $('emgcall'); if (!a) return;
+  a.hidden = !on; if (!on) return;
+  a.href = 'tel:' + EMG.tel;
+  a.innerHTML = ic('phone') + 'Ligar ' + EMG.exibir;
+  a.setAttribute('aria-label', 'Ligar para o contato de segurança, ' + EMG.falar + '. Abre o discador do telefone.');
 }
-function emgTrigger() {
-  if (E.phase === 'call') return;
-  clearInterval(E.iv);
-  if (!E.phase) { E.phase = 'one'; E.left = 20; try { speechSynthesis.cancel(); } catch (e) {} sound('emg1'); show('emg1'); }
-  else { E.phase = 'call'; E.left = 5; sound('emg2'); show('emg2'); const sim = S.sim || (S.nav && S.nav.sim);
-    speak(sim ? 'Ligando para o 190 em 5 segundos. É a simulação, mas a ligação é real. Diga cancelar.' : 'Ligando para o 190 em 5 segundos. Diga cancelar para parar. ' + emgWhere(), { force: true }); }
-  E.iv = setInterval(emgTick, 1000);
+function emgText() {
+  return 'Quando estiver seguro, diga estou seguro. Se o discador não abriu, use o botão Ligar, na parte de baixo da tela. Para tentar de novo, diga ligar.' + (emgSim() ? '' : ' Para a polícia, diga cento e noventa.') + ' Para ouvir isto outra vez, diga repetir.';
+}
+async function emgRepeat() { await emgSay('O número do seu contato de segurança é ' + EMG.falar + '. ' + emgText()); }
+/** Palavra-chave OU pedido de ajuda falado: abre o discador direto, no modo real e na simulação, sem pedir confirmação. */
+async function emgTrigger(src) {
+  if (E.phase) return;
+  E.phase = 'alert'; E.step = 'dialing'; E.dialed = null; E.busy = false; E.src = src; const my = ++E.tok;
+  const n = S.nav; E.resumeNav = !!(n && n.phase !== 'done' && !n.paused);
+  if (E.resumeNav) { n.paused = true; n.tok++; clearTimeout(n.timer); } /* a viagem espera enquanto durar o alerta */
+  try { speechSynthesis.cancel(); } catch (e) {}
+  sound('emg2'); show('emg'); emgLink(true); /* som e vibração específicos + tela + botão Ligar */
+  await sleep(600);
+  if (my !== E.tok || !E.phase) return;
+  return emgDial(EMG.tel, true);
+}
+/** Abre o discador. Fala curta antes (para não atrasar) e o número logo depois. "Foi sem querer" durante a fala curta cancela antes de abrir. */
+async function emgDial(num, direto) {
+  E.step = 'dialing'; E.dialed = num; show('emg');
+  await emgSay((direto ? 'Alerta de emergência ativado. Estou aqui para ajudar. ' : '') + (num === '190' ? 'Abrindo o discador com o número da polícia.' : 'Abrindo o discador para o seu contato de segurança.') + ' Toque em ligar.');
+  if (!E.phase) return;
+  try { dialFn(num); } catch (e) {}
+  E.step = 'after'; show('emg');
+  emgSay('O número é ' + (num === '190' ? 'um nove zero' : EMG.falar) + '. ' + (emgSim() && num !== '190' ? 'Isto é uma simulação, mas o número é real. ' : '') + 'A ligação só acontece quando você tocar em ligar. Eu não envio sua localização nem mensagens. ' + emgText());
+}
+async function emgEnd(why) {
+  if (!E.phase) return;
+  const n = S.nav, resume = E.resumeNav && n && n.phase !== 'done', sim = emgSim();
+  E.phase = null; E.step = null; E.dialed = null; E.resumeNav = false; E.tok++; S.hold = true;
+  try {
+    try { speechSynthesis.cancel(); } catch (e) {}
+    emgLink(false); show(S.view || 'say', S.vdata); sound('ok');
+    await speak((why === 'seguro' ? 'Que bom que você está seguro. ' : why === 'acidente' ? 'Tudo bem, foi só um alarme. ' : 'Tudo bem. ') + 'Alerta de emergência encerrado.' + (sim ? ' Fim da simulação de emergência.' : '') + (resume ? ' Vou retomar a sua viagem.' : ' Vou continuar de onde paramos.'));
+    if (resume && S.nav === n && n.phase !== 'done') { n.paused = false; n.tok++; drawTrip(); await speak(where(n)); if (n.sim) schedule(n); }
+  } finally { S.hold = false; }
+}
+async function emgCmd(ns) {
+  const sim = emgSim(), any = re => ns.some(n => re.test(n)), joined = ns.join(' ');
+  if (any(RE_FIM)) return emgEnd(/seguro|segura/.test(joined) ? 'seguro' : /sem querer/.test(joined) ? 'acidente' : 'nao');
+  if (E.step === 'dialing') return; /* ainda abrindo o discador: só "foi sem querer / cancelar" valem */
+  if (any(RE_POL)) {
+    if (sim) { await emgSay('Na simulação eu não abro o discador da polícia. Em uma emergência real, diga cento e noventa.'); return; }
+    return emgDial('190');
+  }
+  if (any(RE_LIGA)) return emgDial(E.dialed || EMG.tel);
+  if (any(RE_REP)) return emgRepeat();
+  await emgSay('Diga estou seguro quando puder. Para ouvir de novo, diga repetir.');
+}
+async function emgHear(alts) {
+  if (E.busy) return;
+  const echo = echoWords();
+  let ns = alts.map(norm).filter(n => n && !(echo && n.split(' ').every(z => echo.indexOf(z) >= 0)));
+  if (speaking || Date.now() - lastEnd < 700) ns = ns.filter(n => RE_PARE.test(n)); /* enquanto o Guia fala, só "foi sem querer / cancelar / pare" interrompem */
+  if (!ns.length) return;
+  E.busy = true;
+  try { await emgCmd(ns); } finally { E.busy = false; }
 }
 async function deliver(alts) {
-  if (E.phase && alts.some(a => EMG_CANCEL.test(norm(a)))) return emgCancel();
-  if (await emgMatch(alts)) return emgTrigger();
-  if (E.phase) return;
+  if (E.phase) return emgHear(alts);
+  if (await emgMatch(alts)) return emgTrigger('palavra-chave');
+  if (alts.some(a => { const n = norm(a); return RE_SOCORRO.test(n) && !echoText(n); })) return emgTrigger('pedido de ajuda');
   if (speaking || Date.now() - lastEnd < 700) return; /* ignora o eco da própria voz do Guia */
   const ls = S.lastSpoken || ''; alts = alts.filter(a => { const n = norm(a); return !(n.split(' ').length >= 4 && ls.indexOf(n) >= 0); }); if (!alts.length) return;
   if (!S.secret) setHeard(alts[0]); if (waiter) { const w = waiter; waiter = null; w(alts); } else if (mainHandler) mainHandler(alts); }
@@ -667,6 +805,8 @@ async function previsaoGlobal() {
 
 /** Comandos globais, válidos em qualquer pergunta. Devolve true se tratou. */
 async function globalCmd(n) {
+  if (await vibCmd(n)) return true;
+  if (RE_EXPLICA.test(n)) { await speak(EXPLICA_APP); return true; }
   if (RE_PREV.test(n)) { await previsaoGlobal(); return true; }
   if (RE_SIM_OFF.test(n)) { if (S.sim || true) { S.sim = false; S.modeChosen = true; setSimBanner(); sound('ok'); await speak('Modo simulação desativado. Usando localização real.'); return true; } }
   if (RE_SIM_ON.test(n) && !/\b(nao|sem)\b/.test(n)) { S.sim = true; S.modeChosen = true; setSimBanner(); sound('ok'); await speak('Modo simulação ativado.'); return true; }
@@ -677,6 +817,7 @@ async function ask(prompt, parse, o) {
   o = o || {}; let p = prompt; S.secret = !!o.raw; if (!S.secret && o.view !== 'keep') setHeard('');
   if (o.view !== 'keep') show(o.view || 'say', o.view === 'confirm' ? S.vdata : { hint: o.hint !== undefined ? o.hint : (parse === yn ? 'Diga sim ou não.' : ''), tip: o.tip });
   for (;;) {
+    while (E.phase || S.hold) await sleep(200); /* durante a emergência (e logo depois dela) o Guia não atropela a fala do alerta */
     await speak(p); if (S.micOK) sound('listen');
     const alts = await listenOnce(o.wait || 10000);
     if (!alts) { p = o.again || prompt; continue; }
@@ -754,12 +895,15 @@ async function ensureExtras() {
   }
 }
 /* ---------- cadastro 100% por voz, com persistência ---------- */
+const EXPLICA_APP = 'O Guia é um guia por voz para a linha de ônibus 875C-10, do Terminal Lapa ao Metrô Santa Cruz. Você diz para onde quer ir, e eu acompanho a viagem pelo GPS: aviso cada parada do caminho e a hora de descer, com voz, sons e vibração. Tudo funciona falando, sem precisar tocar na tela. Para treinar sem sair de casa, existe o modo simulação, que também mostra o ônibus chegando ao ponto: é só dizer simulação. Em uma emergência, a sua palavra-chave abre na hora o discador para o seu contato de segurança. Durante a viagem, diga ajuda para ouvir os comandos. Para ouvir esta explicação de novo, diga como funciona.';
+const RE_EXPLICA = /\b(como funciona|o que e o guia|o que e esse aplicativo|explica\w* o aplicativo|sobre o aplicativo)\b/;
 async function sha(t, salt) { try { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + t)); return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join(''); } catch (e) { let h = 5381; (salt + t).split('').forEach(c => h = ((h << 5) + h + c.charCodeAt(0)) | 0); return 'x' + h; } }
 const parseName = (n, raw) => { const c = n.replace(/\b(meu nome e|me chamo|pode me chamar de|me chame de|eu sou o|eu sou a|eu sou|sou o|sou a|nome)\b/g, '').trim(); if (c.length < 2 || c.split(' ').length > 4) return undefined; return c.split(' ').map(w => w[0].toUpperCase() + w.slice(1)).join(' '); };
-const KW_BAD = /\b(sim|nao|pronto|cancelar|ajuda|parar|pare|avancar|continuar|repetir|sair|guia|ok|certo|confirmar|corrigir|simulacao)\b/;
+const KW_BAD = /\b(sim|nao|pronto|cancelar|ajuda|parar|pare|avancar|continuar|repetir|sair|guia|ok|certo|confirmar|corrigir|simulacao|socorro|emergencia|perigo|policia)\b/;
 const kwParse = a => { if (!a[0] || a[0].length < 2) return undefined; if (a.some(x => KW_BAD.test(x))) return { retry: 'Essa palavra é usada em comandos. Escolha outra palavra, que você não costuma falar no dia a dia. Diga sua palavra agora.' }; return a; };
 async function register() {
   const pend = store.get('reg') || {}; let name = pend.name;
+  if (!name) { show('say', { hint: '' }); await speak('Antes do cadastro, uma explicação rápida. ' + EXPLICA_APP); }
   while (!name) {
     const n = await ask('Vamos começar seu cadastro. Como você gostaria de ser chamado?', parseName, { again: 'Como você gostaria de ser chamado?' });
     const ok = await ask('Entendi. Você disse ' + n + '. Posso cadastrar esse nome? Diga sim ou não.', yn);
@@ -767,7 +911,7 @@ async function register() {
   }
   let agreed;
   for (;;) {
-    const w1 = await ask('Agora, escolha uma palavra-chave de segurança. Ela servirá para proteger seu perfil E também como palavra de emergência a qualquer momento, no modo real ou na simulação. Diga sua palavra agora.', kwParse, { raw: true, tip: 'Escolha uma palavra só, que você não costuma falar no dia a dia.', hint: '' });
+    const w1 = await ask('Agora, escolha uma palavra-chave de segurança. Ela servirá para proteger seu perfil E também como palavra de emergência a qualquer momento, no modo real ou na simulação. Quando você disser essa palavra, o Guia abre na hora o discador do telefone com o seu contato de segurança, o número ' + EMG.falar + '. É só tocar em ligar. Diga sua palavra agora.', kwParse, { raw: true, again: 'Diga sua palavra-chave agora.', tip: 'Escolha uma palavra só, que você não costuma falar no dia a dia. Ao dizer a palavra, o discador abre direto para ' + EMG.exibir + '.', hint: '' });
     const w2 = await ask('Repita sua palavra-chave para confirmar.', a => a[0] && a[0].length >= 2 ? a : undefined, { raw: true });
     const hit = w1.find(x => w2.indexOf(x) >= 0);
     if (hit) { agreed = hit; break; }
@@ -776,7 +920,7 @@ async function register() {
   const salt = Math.random().toString(36).slice(2);
   store.set('profile', { name, salt, kw: await sha(agreed, salt) }); /* só o hash fica salvo; a palavra nunca é falada nem exibida */
   store.del('reg'); sound('arrive');
-  await speak('Seu cadastro foi concluído com sucesso. Agora podemos começar.');
+  await speak('Seu cadastro foi concluído com sucesso. Em emergência, diga sua palavra-chave ou diga preciso de ajuda, e o discador abre na hora. Atenção: isso só funciona enquanto o Guia estiver aberto e com o microfone liberado. Agora podemos começar.');
 }
 
 /* ---------- paradas: reconhecimento inteligente (módulo do arquivo mestre linha875c10.js) ---------- */
@@ -933,9 +1077,11 @@ async function aplicarParada(n, s, intro, livre) {
   if (!livre && s.id - 1 < n.idx) { await speak('Você já passou pela parada ' + nm(s) + '. A última registrada foi ' + nm(STOPS[n.idx]) + '.'); return; }
   if (s.id === n.dest.id) { clearTimeout(n.timer); n.idx = n.dest.id - 2; await speak(intro); await step(n, false); return; }
   if (livre ? s.id - 1 !== n.idx : s.id - 1 > n.idx) { n.idx = s.id - 1; n.tok++; saveTrip({ origin: n.origin.id, dest: n.dest.id, idx: n.idx, sim: n.sim }); S.ans = null; drawTrip(); }
-  clearTimeout(n.timer); if (n.sim && !n.paused && n.phase !== 'done') schedule(n);
+  clearTimeout(n.timer);
   const l = n.dest.id - STOPS[n.idx].id;
   await speak(intro + ' Faltam ' + pl(l, 'parada', 'paradas') + ' até ' + nm(n.dest) + '.');
+  if (l === 1 && n.phase !== 'done') await avisar(n, 'preparacao', n.dest, msgPreparacao(n)); /* posição corrigida por voz para a penúltima: prepara o desembarque */
+  if (n.sim && !n.paused && n.phase !== 'done') schedule(n);
 }
 /** "Estou na Rua Roma": junta o que você disse com o GPS. */
 async function posicaoFalada(n, m) {
@@ -956,39 +1102,155 @@ async function posicaoFalada(n, m) {
   return true;
 }
 
-/* ---------- viagem: simulação e GPS real, comandos por voz ---------- */
-const NAV_MS = 5000;
+/* ---------- espera pelo ônibus (SIMULAÇÃO): aviso de chegada por voz, som e vibração ----------
+   Tudo aqui é simulado e dito como simulado: não existe ligação com dados reais de chegada do ônibus nesta etapa. */
+const RE_QUANTO = /\b(quanto (tempo )?falta|quanto falta|quando chega|ja chegou)\b/;
+const HELP_BUS = 'Você pode dizer: quanto falta, para ouvir a previsão simulada. Repetir. Avançar, para pular a espera na simulação. Parar, para pausar. Continuar. Ou sair, para encerrar. Em emergência, diga sua palavra-chave ou preciso de ajuda.';
+function busStatus(b) {
+  if (b.ph === 'here') return 'O ônibus simulado já chegou. Confirme a linha com o motorista e cuidado com o degrau ao subir.';
+  return 'Previsão simulada: o ônibus chega em cerca de ' + pl(Math.max(1, Math.ceil(b.left)), 'minuto', 'minutos') + '. Lembrando que é uma simulação, não são dados reais do ônibus.';
+}
+const busMsgFar = stop => 'Seu ônibus, linha ' + BUS.linha + ', sentido ' + BUS.sentido + ', está chegando ao ponto ' + nm(stop) + '. Previsão simulada de chegada: ' + pl(BUS.minutos, 'minuto', 'minutos') + '. Esta previsão é simulada, não são dados reais do ônibus. Preste atenção ao ponto de embarque. Ao subir, cuidado com o degrau e segure no corrimão.';
+const busMsgNear = () => 'Seu ônibus está quase chegando. Previsão simulada: cerca de 1 minuto. Prepare-se para embarcar e tenha cuidado ao subir o degrau.';
+const busMsgHere = () => 'Seu ônibus chegou. Confirme se é a linha correta antes de embarcar: se tiver dúvida, pergunte ao motorista se é a ' + BUS.linha + '. Cuidado com o degrau ao subir e segure no corrimão. Lembrete: isto é uma simulação, o ônibus não é real.';
+/** Devolve 'ok' (pessoa disse que embarcou) ou 'cancel'. */
+async function busArrivalSim(trip) {
+  const stop = trip.origin;
+  const b = S.bus = { stop, left: BUS.minutos, ph: 'far', paused: false, busy: false, t: null, last: '', shown: null, done: null };
+  const finished = new Promise(r => b.done = r);
+  let hbusy = false, over = false;
+  const say = t => { b.last = t; return speak(t); };
+  const finish = r => { if (over) return; over = true; clearInterval(b.t); b.done(r); };
+  const announce = async (phase, snd, text) => {
+    b.busy = true; b.ph = phase; show('bus'); sound(snd); notify('GuIa', phase === 'here' ? 'Seu ônibus (simulado) chegou.' : 'Ônibus ' + BUS.linha + ' chegando (simulado).');
+    await sleep(600); if (!over) await say(text); b.busy = false;
+  };
+  mainHandler = async alts => { if (hbusy) return; hbusy = true; try {
+    for (const a of alts) { const m = norm(a);
+      if (RE_SIM_OFF.test(m)) { S.sim = false; S.modeChosen = true; setSimBanner(); await speak('Modo simulação desativado. Usando localização real.'); finish('cancel'); return; }
+      if (/\b(sair|encerrar|cancelar|desistir|terminar)\b/.test(m)) { await speak('Viagem cancelada.'); finish('cancel'); return; }
+      if (await vibCmd(m)) return;
+      if (RE_QUANTO.test(m) || RE_PREV.test(m)) { await say(busStatus(b)); return; }
+      if (/\bajuda\b/.test(m)) { await say(HELP_BUS); return; }
+      if (/\b(repetir|repete|ouvir de novo)\b/.test(m)) { await say(b.last || busStatus(b)); return; }
+      if (/\b(avancar|avanca|pular)\b/.test(m)) { if (b.ph === 'far') b.left = Math.min(b.left, 1); else if (b.ph === 'near') b.left = 0; return; }
+      if (/\b(parar|pare|pausar|pausa|espera|aguarde)\b/.test(m)) { b.paused = true; await say('Contagem simulada pausada. Diga continuar para seguir.'); return; }
+      if (/\b(continuar|continua|retomar|seguir)\b/.test(m)) { if (b.paused) { b.paused = false; await say('Retomando a contagem simulada.'); } else await say('A contagem já está em andamento.'); return; }
+    } sound('err'); } finally { hbusy = false; } };
+  const tick = async () => {
+    if (over || b.paused || b.busy || speaking || E.phase) return; /* o relógio simulado espera enquanto o Guia fala e durante uma emergência */
+    b.left = Math.max(0, b.left - 0.25 / BUS.segPorMin);
+    if (b.left <= 0) { await announce('here', 'busHere', busMsgHere()); finish('here'); return; }
+    if (b.ph === 'far' && b.left <= 1) { await announce('near', 'busNear', busMsgNear()); return; }
+    const mm = Math.ceil(b.left); if (mm !== b.shown) { b.shown = mm; show('bus'); }
+  };
+  await announce('far', 'busCome', busMsgFar(stop));
+  if (!over) b.t = setInterval(tick, 250);
+  const r = await finished;
+  mainHandler = null;
+  if (r === 'cancel') { S.bus = null; return 'cancel'; }
+  const emb = await ask('Quando estiver dentro do ônibus, diga embarquei, e eu começo a acompanhar o trajeto.',
+    n => /\b(sair|encerrar|cancelar|desistir)\b/.test(n) ? 'cancel' : /\b(embarquei|embarcado|subi|entrei|pronto|continuar|seguir|ok|sim|pode)\b/.test(n) ? 'ok' : undefined,
+    { view: 'keep', again: 'Diga embarquei quando estiver dentro do ônibus.', wait: 20000 });
+  S.bus = null;
+  return emb;
+}
+
+/* ---------- viagem: simulação e GPS real, comandos por voz ----------
+   Eventos do trajeto (cada um uma vez por ocorrência, com voz + som + vibração do mesmo evento):
+   aproximacao (próxima parada) → chegada (parada) → … → preparacao (ao chegar na penúltima) → aproximacao (destino) → destino.
+   atencao: mudanças importantes (GPS perdido, permissão retirada, destino passado). */
+const NAV = { ms: 7000, semSinalMs: 30000, esperaToqueMs: 15000 }; /* simulação: cada trecho dura NAV.ms (aproximação na metade, chegada no fim), deixando ~3,5 s de silêncio para a pessoa falar */
+const falandoAgora = () => !!S.ouvindoFala && Date.now() - S.ouvindoFala < 8000;
+const APROX_M = 250, SAIU_M = 60; /* GPS: aproximação a até 250 m da próxima parada, depois de sair 60 m da atual */
+const EVENTOS_LOG = []; let tripSeq = 0;
 function drawTrip() { if (S.nav) setTrip(); }
-function passMsg(s, l, n) {
-  const nx = STOPS[s.id], d = dist(s, nx);
-  if (l === 1) return 'Atenção: desça na próxima parada, ' + nm(n.dest) + '. Passando pela parada ' + nm(s) + '. Falta 1 parada.';
-  return 'Atenção: passando pela parada ' + nm(s) + '. Faltam ' + pl(l, 'parada', 'paradas') + '. Próxima: ' + nm(nx) + ', a ' + fmtD(d) + '.';
+const rotuloParada = s => 'parada ' + s.id + ', ' + nm(s);
+const msgAproximacao = (n, nx) => 'Estamos nos aproximando da próxima parada: ' + rotuloParada(nx) + '.' + (nx.id === n.dest.id ? ' É o seu destino.' : '');
+function msgChegada(n, s) {
+  const l = n.dest.id - s.id, nx = STOPS[s.id];
+  return 'Chegamos à ' + rotuloParada(s) + '.' + (l > 1 ? ' Faltam ' + pl(l, 'parada', 'paradas') + ' até ' + nm(n.dest) + '. Próxima: ' + nm(nx) + ', a ' + fmtD(dist(s, nx)) + '.' : '');
+}
+const msgPreparacao = n => 'Prepare-se para desembarcar na próxima parada, ' + nm(n.dest) + '. Aguarde o ônibus parar completamente.';
+const msgDestino = n => 'Você chegou ao seu destino, ' + nm(n.dest) + '. Confirme sua localização antes de prosseguir.' + (n.dest.id === 46 ? ' Fim da linha.' : '') + (n.sim ? ' Fim da simulação. Voltando ao modo real.' : ' Ao descer, cuidado com o degrau.');
+/** Coordena um evento: marca (uma vez só), pede a vibração, toca o som do mesmo ritmo, fala e registra. Devolve false se já tinha acontecido. */
+async function avisar(n, tipo, stop, texto, extra) {
+  const key = tipo + ':' + (stop ? stop.id : '-') + (extra ? ':' + extra : '');
+  if (!n.eventos || n.eventos.has(key)) return false;
+  n.eventos.add(key);
+  const v = vibrar(tipo);
+  sound('ev_' + tipo);
+  n.ultimo = { tipo, stop: stop || null, texto };
+  EVENTOS_LOG.push({ viagem: n.id, tipo, parada: stop ? stop.id : null, padrao: PADROES_VIBRACAO[tipo].padrao, vibracao: v.estado, texto, t: Date.now() });
+  if (EVENTOS_LOG.length > 500) EVENTOS_LOG.shift();
+  if (S.nav === n) drawTrip();
+  let fala = texto;
+  if (!v.pedida && !n.avisoVib && textoSemVibracao(v.estado)) { n.avisoVib = v.estado; fala = textoSemVibracao(v.estado) + ' ' + texto; } /* sem vibração: avisa uma vez e segue só por áudio */
+  await speak(fala);
+  return true;
+}
+/** Início da viagem: avisa se não houver vibração e, se a origem já é a penúltima parada, prepara o desembarque. */
+async function inicioSinais(n) {
+  let st = vibStatus();
+  if (st === 'bloqueada') { /* o Chrome só libera a vibração depois de um toque na tela: o Guia pede o toque por voz e espera */
+    n.avisoVib = 'pedido-toque';
+    await speak('Para o celular vibrar a cada parada, toque uma vez em qualquer lugar da tela. Estou aguardando.');
+    for (let t = 0; t < NAV.esperaToqueMs && vibStatus() === 'bloqueada' && n.phase !== 'done'; t += 250) await sleep(250);
+    st = vibStatus();
+    if (st === 'disponivel') {
+      const v = vibrar('aproximacao'); n.avisoVib = 'liberada';
+      await speak(v.pedida ? 'Toque recebido. Pedi uma vibração curta ao aparelho. Se você sentiu, a vibração em cada parada está funcionando.' : textoSemVibracao(v.estado));
+    } else if (st === 'bloqueada') { n.avisoVib = 'bloqueada'; await speak(textoSemVibracao('bloqueada')); }
+  }
+  if (!n.avisoVib && textoSemVibracao(st)) { n.avisoVib = st; await speak(textoSemVibracao(st)); }
+  if (n.phase !== 'done' && n.dest.id - STOPS[n.idx].id === 1) await avisar(n, 'preparacao', n.dest, msgPreparacao(n));
 }
 async function arrive(n) {
   clearTrip();
-  const my = n.tok = (n.tok || 0) + 1; clearTimeout(n.timer); n.phase = 'done'; sound('arrive'); notify('GuIa', 'Você chegou: ' + nm(n.dest));
+  n.tok = (n.tok || 0) + 1; clearTimeout(n.timer); n.phase = 'done'; notify('GuIa', 'Você chegou: ' + nm(n.dest));
   show('arrive', { dest: nm(n.dest), sim: n.sim });
-  await speak('Você chegou ao seu destino: ' + nm(n.dest) + '.' + (n.dest.id === 46 ? ' Fim da linha.' : '') + (n.sim ? ' Fim da simulação. Voltando ao modo real.' : '')); n.done('arrived');
+  await avisar(n, 'destino', n.dest, msgDestino(n)); n.done('arrived');
 }
 async function step(n, manual) {
   if (n.phase === 'done') return;
   n.idx++; const s = STOPS[n.idx], l = n.dest.id - s.id; const my = ++n.tok; n.count++;
   if (l <= 0) return arrive(n);
   saveTrip({ origin: n.origin.id, dest: n.dest.id, idx: n.idx, sim: n.sim });
-  sound(l === 1 ? 'near' : 'pass'); if (l === 1) notify('GuIa', 'Desça na próxima parada: ' + nm(n.dest));
-  S.ans = null; drawTrip(); let msg = passMsg(s, l, n); if (n.sim && n.count % 6 === 0) msg += ' Lembrete: você está no modo simulação.';
-  await speak(msg);
+  if (l === 1) notify('GuIa', 'Desça na próxima parada: ' + nm(n.dest));
+  S.ans = null; drawTrip(); let msg = msgChegada(n, s); if (n.sim && n.count % 6 === 0) msg += ' Lembrete: você está no modo simulação.';
+  await avisar(n, 'chegada', s, msg);
+  if (l === 1 && n.phase !== 'done' && STOPS[n.idx] === s) await avisar(n, 'preparacao', n.dest, msgPreparacao(n));
   if (my === n.tok && n.sim && !n.paused) schedule(n);
 }
-function schedule(n) { clearTimeout(n.timer); const my = n.tok; n.timer = setTimeout(() => { if (my === n.tok && !n.paused && n.phase !== 'done') step(n, false); }, NAV_MS); }
+/** Simulação: metade do trecho → aproximação da próxima parada; fim do trecho → chegada. Um único timer por viagem (cancelado em pausa, saída ou chegada). */
+function schedule(n) {
+  clearTimeout(n.timer); const my = n.tok, nx = STOPS[n.idx + 1];
+  if (!nx || n.phase === 'done') return;
+  const fire = async () => {
+    if (my !== n.tok || n.paused || n.phase === 'done') return;
+    if (falandoAgora()) { n.timer = setTimeout(fire, 400); return; } /* não atropela quem está falando: o aviso sai logo depois */
+    if (!n.eventos.has('aproximacao:' + nx.id)) { await avisar(n, 'aproximacao', nx, msgAproximacao(n, nx)); if (my === n.tok && !n.paused && n.phase !== 'done') schedule(n); }
+    else step(n, false);
+  };
+  n.timer = setTimeout(fire, NAV.ms / 2);
+}
 async function watchTick(n, c) {
+  n.lastFix = Date.now();
   if (n.paused || n.phase === 'done') return;
   const pos = { lat: c.latitude, lng: c.longitude }, nr = nearest(pos, n.idx, n.dest.id - 1);
   n.lastPos = pos; n.lastNear = nr; n.acc = c.accuracy || 0; n.lastNearAll = nearest(pos, 0, STOPS.length - 1);
+  if (n.semSinal) { n.semSinal = false; speak('O sinal do GPS voltou. Continuo acompanhando as paradas.'); }
   if (!n.tDraw || Date.now() - n.tDraw > 2500) { n.tDraw = Date.now(); if (S.view === 'route' && !(S.emg && S.emg.phase)) show('route'); }
-  if (nr.i > n.idx && nr.d <= Math.max(90, (c.accuracy || 0) * 1.2)) { n.idx = nr.i - 1; await step(n, false); }
-  else if (!n.nearSaid && n.dest.id - 1 > n.idx && dist(pos, n.dest) <= 150) { n.nearSaid = true; sound('near'); await speak('Você está chegando em ' + nm(n.dest) + '. Prepare-se para desembarcar.'); }
-  if (dist(pos, n.dest) <= 50 && n.phase !== 'done') { n.idx = n.dest.id - 2; await step(n, false); }
+  const raio = Math.max(90, n.acc * 1.2);
+  if (nr.i > n.idx && nr.d <= raio) { n.idx = nr.i - 1; await step(n, false); return; }
+  if (dist(pos, n.dest) <= 50 && n.phase !== 'done') { n.idx = n.dest.id - 2; await step(n, false); return; }
+  const cur = STOPS[n.idx], nx = STOPS[n.idx + 1];
+  if (nx && nx.id <= n.dest.id && !n.eventos.has('aproximacao:' + nx.id)) {
+    const dn = dist(pos, nx);
+    if (dist(pos, cur) > SAIU_M && dn <= APROX_M && dn > raio) await avisar(n, 'aproximacao', nx, msgAproximacao(n, nx));
+  }
+  const g = n.lastNearAll;
+  if (n.dest.id < STOPS.length && g.i > n.dest.id - 1 && g.d <= raio) await avisar(n, 'atencao', n.dest, 'Atenção: parece que o ônibus já passou do seu destino, ' + nm(n.dest) + '. Desça na próxima parada com segurança e, se puder, peça ajuda ao motorista.', 'passou');
 }
 /** Onde estou: no modo real vem do GPS (nunca do que foi falado); na simulação diz que a posição é simulada. */
 function whereReal(n) {
@@ -998,44 +1260,90 @@ function whereReal(n) {
   return 'Pelo GPS, você está a ' + fmtD(g.d) + ' da parada ' + nm(g.s) + (n.acc ? ', com precisão de cerca de ' + Math.round(n.acc) + ' metros' : '') + '. A última parada registrada foi ' + nm(s) + '. Faltam ' + pl(l, 'parada', 'paradas') + ' até ' + nm(n.dest) + '.';
 }
 function where(n) { const s = STOPS[n.idx], l = n.dest.id - s.id; return 'Você está na parada ' + s.id + ', ' + nm(s) + '. Faltam ' + pl(l, 'parada', 'paradas') + ' até ' + nm(n.dest) + '.' + (n.sim ? ' Atenção: você está no modo simulação.' : ''); }
-const HELP = 'Você pode dizer: estou na, e o nome da rua, para eu confirmar com o GPS. Previsão, para saber quando o ônibus passa. Avançar, para pular uma parada na simulação. Parar, para pausar. Continuar. Onde estou. Próxima parada. Repetir. Para onde vou. Modo real, ou ativar simulação. Ou sair, para encerrar a viagem.';
+function proximaTexto(n) { const nx = STOPS[Math.min(n.idx + 1, n.dest.id - 1)], d = dist(n.lastPos || STOPS[n.idx], nx); return 'A próxima parada é a ' + rotuloParada(nx) + (nx.id === n.dest.id ? ', o seu destino' : '') + '. Distância aproximada: ' + fmtD(d) + '.'; }
+function jaChegou(n) { const l = n.dest.id - STOPS[n.idx].id; return 'Ainda não. ' + (l <= 1 ? 'Seu destino, ' + nm(n.dest) + ', é a próxima parada. Prepare-se para desembarcar.' : 'Faltam ' + pl(l, 'parada', 'paradas') + ' até ' + nm(n.dest) + '. A próxima é ' + nm(STOPS[n.idx + 1]) + '.') + (n.sim ? ' Atenção: você está no modo simulação.' : ''); }
+/** "Repete o sinal": repete o áudio E o padrão tátil do último evento (ou explica, por voz, por que não vibra). */
+async function repetirSinal(n) {
+  const u = n.ultimo; if (!u) { await reply(n, 'Ainda não houve nenhum sinal nesta viagem.'); return; }
+  const p = PADROES_VIBRACAO[u.tipo], v = vibrar(u.tipo); sound('ev_' + u.tipo);
+  EVENTOS_LOG.push({ viagem: n.id, tipo: u.tipo, parada: u.stop ? u.stop.id : null, padrao: p.padrao, vibracao: v.estado, texto: u.texto, repeticao: true, t: Date.now() });
+  await reply(n, (v.pedida ? 'Sinal de ' + p.evento + ': ' + p.nome + '. ' : (textoSemVibracao(v.estado) ? textoSemVibracao(v.estado) + ' ' : '') + 'O sinal era de ' + p.evento + ', ' + p.nome + '. ') + u.texto);
+}
+/* ---------- comandos de vibração (valem em qualquer pergunta e durante a viagem) ---------- */
+const RE_VIB_OFF = /\b(desligar|desativar|desliga|tirar|sem) (a )?vibracao\b/;
+const RE_VIB_ON = /\b(ligar|ativar|liga|ativa|voltar) (a )?vibracao\b/;
+const RE_VIB_TESTE = /\b(testar|teste|testa) (a |de )?vibracao\b/;
+async function testarVibracao() {
+  const st = vibStatus();
+  if (st !== 'disponivel') { await speak(textoSemVibracao(st) || 'A vibração está desligada. Para ligar, diga ligar vibração.'); return; }
+  await speak('Vou mostrar os cinco sinais. Depois de cada nome, peço ao aparelho para vibrar.');
+  for (const tipo of Object.keys(PADROES_VIBRACAO)) {
+    const p = PADROES_VIBRACAO[tipo]; await speak('Sinal de ' + p.evento + ': ' + p.nome + '.');
+    const v = vibrar(tipo); if (!v.pedida) { await speak(textoSemVibracao(v.estado)); return; }
+    await sleep(duracaoPadrao(p.padrao) + 700);
+  }
+  await speak('Esses são os sinais. Eu peço a vibração ao aparelho, mas não consigo confirmar se ela aconteceu. Se você não sentiu nada, confira se a vibração está ligada nas configurações do celular.');
+}
+async function vibCmd(m) {
+  if (RE_VIB_TESTE.test(m)) { await testarVibracao(); return true; }
+  if (RE_VIB_OFF.test(m)) { prefs.vib = false; store.set('prefs', prefs); cancelarVibracao(); drawTrip(); await speak('Vibração desligada. Vou continuar orientando você por áudio.'); return true; }
+  if (RE_VIB_ON.test(m)) {
+    if (typeof navigator.vibrate !== 'function') { await speak(textoSemVibracao('sem-suporte')); return true; }
+    prefs.vib = true; store.set('prefs', prefs); drawTrip(); await speak('Vibração ligada. Para conferir os sinais, diga testar vibração.'); return true;
+  }
+  return false;
+}
+const RE_REP_SINAL = /\b(repet\w*|de novo|outra vez)\b.*\b(sinal|vibracao|padrao)\b|\b(sinal|vibracao) de novo\b|\bvibra de novo\b/;
+const RE_JA_CHEGOU = /\b(ja chegamos|ja cheguei|ja chegou|chegamos|cheguei|falta muito)\b/;
+const RE_ONDE = /\b(onde estou|onde eu estou|onde estamos|em (que|qual) parada (eu )?(estou|estamos|esta)|que parada e essa|qual (e )?(a )?parada atual)\b/;
+const HELP = 'Você pode dizer: qual é a próxima parada. Em que parada estamos. Já chegamos. Repete a informação. Repete o sinal da parada, para sentir a vibração de novo. Testar vibração, ou desligar vibração. Estou na, e o nome da rua, para eu confirmar com o GPS. Previsão. Avançar, para pular uma parada na simulação. Parar. Continuar. Modo real, ou ativar simulação. Ou sair, para encerrar a viagem. Em emergência, diga sua palavra-chave ou preciso de ajuda.';
 async function reply(n, text) { S.ans = { q: n.asked || '', a: text }; if (S.view === 'route' || S.view === 'near') show(S.view); await speak(text); }
 async function navCmd(n, c) {
   const m = c;
-  if (/\b(sair|encerrar|cancelar viagem|cancelar rota|terminar)\b/.test(m) && !RE_SIM_OFF.test(m)) { clearTimeout(n.timer); n.phase = 'done'; n.tok++; clearTrip(); await speak('Viagem encerrada.'); n.done('cancel'); return true; }
-  if (RE_SIM_OFF.test(m)) { clearTimeout(n.timer); n.phase = 'done'; n.tok++; clearTrip(); S.sim = false; S.modeChosen = true; setSimBanner(); await speak('Modo simulação desativado. Usando localização real.'); n.done('cancel'); return true; }
+  if (/\b(sair|encerrar|cancelar viagem|cancelar rota|terminar)\b/.test(m) && !RE_SIM_OFF.test(m)) { clearTimeout(n.timer); n.phase = 'done'; n.tok++; cancelarVibracao(); clearTrip(); await speak('Viagem encerrada.'); n.done('cancel'); return true; }
+  if (RE_SIM_OFF.test(m)) { clearTimeout(n.timer); n.phase = 'done'; n.tok++; cancelarVibracao(); clearTrip(); S.sim = false; S.modeChosen = true; setSimBanner(); await speak('Modo simulação desativado. Usando localização real.'); n.done('cancel'); return true; }
+  if (RE_REP_SINAL.test(m)) { await repetirSinal(n); return true; }
+  if (await vibCmd(m)) return true;
   if (RE_PREV.test(m)) { await reply(n, previsaoNoOnibus(n)); return true; }
   if (/\bajuda\b/.test(m)) { await reply(n, HELP); return true; }
-  if (/\b(onde estou|onde eu estou)\b/.test(m)) { await reply(n, whereReal(n)); return true; }
+  if (RE_EXPLICA.test(m)) { await reply(n, EXPLICA_APP); return true; }
+  if (RE_JA_CHEGOU.test(m)) { await reply(n, jaChegou(n)); return true; }
+  if (RE_ONDE.test(m)) { await reply(n, whereReal(n)); return true; }
   if (RE_ESTOU.test(m)) { const f0 = paradaFalada(m, n.sim ? null : n.lastPos); if (f0.stop || f0.ambigua) return await posicaoFalada(n, m); }
   if (/\b(para onde vou|destino)\b/.test(m)) { await reply(n, 'Seu destino é ' + nm(n.dest) + ', parada ' + n.dest.id + '. Faltam ' + pl(n.dest.id - STOPS[n.idx].id, 'parada', 'paradas') + '.'); return true; }
-  if (/\bproxima parada\b|\bproximo ponto\b/.test(m)) { const nx = STOPS[Math.min(n.idx + 1, 45)], d = dist(n.lastPos || STOPS[n.idx], nx); await reply(n, 'Próxima parada: ' + nm(nx) + '. Distância aproximada: ' + fmtD(d) + '.'); return true; }
-  if (/\b(repetir|repete|ouvir de novo)\b/.test(m)) { await reply(n, S.lastNavMsg || where(n)); return true; }
+  if (/\bproxima parada\b|\bproximo ponto\b/.test(m)) { await reply(n, proximaTexto(n)); return true; }
+  if (/\b(repetir|repete|repita|ouvir de novo)\b/.test(m)) { await reply(n, n.ultimo ? n.ultimo.texto : where(n)); return true; }
   if (/\b(avancar|avanca|pular)\b/.test(m)) { if (!n.sim) { await speak('Avançar só funciona na simulação. Na localização real, eu acompanho pelo GPS.'); return true; } clearTimeout(n.timer); await step(n, true); return true; }
-  if (/\b(parar|pare|pausar|pausa|espera|aguarde)\b/.test(m)) { n.paused = true; n.tok++; clearTimeout(n.timer); drawTrip(); await speak('Pausado na parada ' + nm(STOPS[n.idx]) + '. Diga continuar para seguir' + (n.sim ? ', ou avançar para pular uma parada.' : '.')); return true; }
+  if (/\b(parar|pare|pausar|pausa|espera|aguarde)\b/.test(m)) { n.paused = true; n.tok++; clearTimeout(n.timer); cancelarVibracao(); drawTrip(); await speak('Pausado na parada ' + nm(STOPS[n.idx]) + '. Diga continuar para seguir' + (n.sim ? ', ou avançar para pular uma parada.' : '.')); return true; }
   if (/\b(continuar|continua|retomar|prosseguir|seguir)\b/.test(m)) { if (n.paused) { n.paused = false; n.tok++; drawTrip(); await speak('Retomando. Você está na parada ' + nm(STOPS[n.idx]) + '.'); if (n.sim) schedule(n); } else await speak('A viagem já está em andamento.'); return true; }
   if (RE_SIM_ON.test(m)) { if (n.sim) await speak('A simulação já está ativa.'); else await speak('Para simular, encerre esta viagem dizendo sair e depois diga simulação.'); return true; }
   return false;
 }
 async function runTrip(t) {
   const rs = t.resume || null;
-  const n = S.nav = { origin: t.origin, dest: t.dest, idx: rs ? rs.idx : t.origin.id - 1, paused: false, tok: 0, sim: rs ? !!rs.sim : S.sim, timer: null, count: 0, phase: 'run', nearSaid: false };
-  const finished = new Promise(r => n.done = r); let watch = null, busy = false, wl = null;
+  const n = S.nav = { id: ++tripSeq, eventos: new Set(), ultimo: null, avisoVib: null, origin: t.origin, dest: t.dest, idx: rs ? rs.idx : t.origin.id - 1, paused: false, tok: 0, sim: rs ? !!rs.sim : S.sim, timer: null, count: 0, phase: 'run' };
+  const finished = new Promise(r => n.done = r); let watch = null, busy = false, wl = null, gpsIv = null;
   try { if (navigator.wakeLock) navigator.wakeLock.request('screen').then(l => wl = l, () => {}); } catch (e) {}
   mainHandler = async alts => { if (busy) return; busy = true; n.asked = alts[0]; try { for (const a of alts) { if (await navCmd(n, norm(a))) return; } sound('err'); } finally { busy = false; } };
   const L = t.dest.id - (n.idx + 1); S.ans = null; saveTrip({ origin: n.origin.id, dest: n.dest.id, idx: n.idx, sim: n.sim }); drawTrip();
   if (n.sim && rs) {
     await speak('Retomando o trajeto até ' + nm(t.dest) + '. Você está na parada ' + nm(STOPS[n.idx]) + '. Faltam ' + pl(L, 'parada', 'paradas') + ' até o destino. Atenção: você está no modo simulação.');
-    schedule(n);
   } else if (n.sim) {
     await speak('Perfeito. Simulando o trajeto da linha 875C-10 até ' + nm(t.dest) + '. Você está na parada ' + nm(t.origin) + '. Faltam ' + pl(L, 'parada', 'paradas') + ' até o destino. Atenção: você está no modo simulação.');
-    schedule(n);
   } else {
-    watch = navigator.geolocation.watchPosition(p => watchTick(n, p.coords), e => { if (e.code === 1) { n.paused = true; speak('A permissão de localização foi retirada. Diga modo real quando liberar, ou ativar simulação.'); } }, { enableHighAccuracy: true, maximumAge: 2000, timeout: 20000 });
+    n.lastFix = Date.now();
+    watch = navigator.geolocation.watchPosition(p => watchTick(n, p.coords), e => { if (e.code === 1) { n.paused = true; avisar(n, 'atencao', null, 'Atenção: a permissão de localização foi retirada, então parei de acompanhar as paradas. Diga modo real quando liberar, ou ativar simulação.', 'permissao'); } }, { enableHighAccuracy: true, maximumAge: 2000, timeout: 20000 });
+    gpsIv = setInterval(() => { /* GPS mudo por muito tempo: aviso de atenção (uma vez por perda de sinal) */
+      if (n.paused || n.phase === 'done' || n.semSinal || Date.now() - n.lastFix <= NAV.semSinalMs) return;
+      n.semSinal = true; n.perdas = (n.perdas || 0) + 1;
+      avisar(n, 'atencao', null, 'Atenção: estou sem sinal de GPS, então posso não perceber as paradas. Vou continuar tentando. Se souber onde está, diga estou na, e o nome da rua.', 'gps' + n.perdas);
+    }, 2000);
     await speak(rs ? 'Retomando o trajeto até ' + nm(t.dest) + '. Você estava na parada ' + nm(STOPS[n.idx]) + '. Faltam ' + pl(L, 'parada', 'paradas') + '. Eu aviso cada parada pelo GPS.' : 'Navegação iniciada até ' + nm(t.dest) + ', linha 875C-10. Faltam ' + pl(L, 'parada', 'paradas') + '. Eu aviso cada parada pelo GPS. Diga ajuda para ouvir os comandos.');
   }
+  if (n.phase !== 'done') await inicioSinais(n);
+  if (n.sim && n.phase !== 'done' && !n.paused) schedule(n);
   const r = await finished;
-  clearTimeout(n.timer); if (watch != null) navigator.geolocation.clearWatch(watch); try { wl && wl.release(); } catch (e) {}
+  clearTimeout(n.timer); clearInterval(gpsIv); if (watch != null) navigator.geolocation.clearWatch(watch); try { wl && wl.release(); } catch (e) {}
   mainHandler = null; S.nav = null; S.ans = null;
   return r;
 }
@@ -1059,13 +1367,17 @@ async function mainLoop(first, saved, greet) {
       saveTrip({ origin: trip.origin.id, dest: trip.dest.id, idx: trip.origin.id - 1, sim: false, phase: 'walk' });
       const r = await walkToStop(trip.origin); if (r !== 'arrived') { clearTrip(); first = 'Para onde você gostaria de ir?'; continue; }
     }
+    if (S.sim && !trip.resume) { /* simulação: antes de embarcar, o ônibus simulado se aproxima e chega, com voz, som e vibração */
+      const rb = await busArrivalSim(trip);
+      if (rb === 'cancel') { clearTrip(); if (S.sim) { S.sim = false; S.modeChosen = false; setSimBanner(); await speak('Voltando ao modo real.'); } first = 'Para onde você gostaria de ir?'; continue; }
+    }
     const fim = await runTrip(trip); /* a tela de chegada fica visível durante a pergunta */
     if (S.sim) { S.sim = false; S.modeChosen = false; setSimBanner(); if (fim === 'cancel') await speak('Voltando ao modo real.'); } /* a simulação não fica ligada nas próximas viagens: o padrão é o GPS real */
     const again = await ask('Quer fazer uma nova viagem? Diga novo destino, ou encerrar guia.', n => /\b(encerrar|encerra|nao|sair|fim)\b/.test(n) ? false : /\b(novo|nova|outro|outra|sim|quero|destino)\b/.test(n) ? true : undefined, { view: 'keep' });
     if (!again) await ask('Tudo bem. Estou ouvindo. Diga Para onde vou, quando quiser ir a algum lugar.', n => /\b(para onde|destino|viagem|ir|quero|guia|comecar)\b/.test(n) ? true : undefined, { wait: 45000 });
     first = 'Para onde você gostaria de ir?';
    } catch (e) { /* qualquer falha inesperada: o Guia avisa por voz e recomeça, em vez de ficar mudo */
-    console.error(e); S.nav = null; S.walk = null; mainHandler = null; waiter = null; first = 'Para onde você gostaria de ir?';
+    console.error(e); S.nav = null; S.walk = null; S.bus = null; mainHandler = null; waiter = null; first = 'Para onde você gostaria de ir?';
     try { await speak('Tive um problema, mas já estou de volta.'); } catch (e2) {}
    }
   }
@@ -1096,7 +1408,7 @@ async function boot() {
 }
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 window.addEventListener('load', () => boot().catch(e => { console.error(e); setCaption('Algo falhou. Recarregue a página.'); }));
-window.Guia = { validTrip, setDial: f => { dialFn = f; }, saudacao, E, S, STOPS, deliver, reconhecerParada, store, speak, show, setState };
+window.Guia = { validTrip, setDial: f => { dialFn = f; }, saudacao, E, S, STOPS, deliver, reconhecerParada, store, speak, show, setState, EMG, BUS, busArrivalSim, emgTrigger, NAV, PADROES_VIBRACAO, EVENTOS_LOG, vibrar, vibStatus };
 </script>
 </body>
 </html>
