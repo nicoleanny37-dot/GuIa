@@ -1,0 +1,337 @@
+/**
+ * GuIa — servidor intermediário (Cloudflare Worker)
+ *
+ * Arquivos:
+ *   worker.js            este arquivo: roteador + previsão do ônibus 875C-10 (API Olho Vivo, SPTrans)
+ *   bot-responsavel.js   o bot do Telegram: cadastro do responsável, aceite do pedido e alerta de emergência
+ *   comum.js             funções usadas pelos dois
+ *
+ * Segredos (Secret):    TELEGRAM_BOT_TOKEN, TELEGRAM_WEBHOOK_SECRET, SPTRANS_TOKEN
+ * Variáveis (Text):     BOT_USERNAME, ALLOWED_ORIGINS, (opcional) LINHA_CODIGO, SPTRANS_BASE
+ * KV:                   GUIA_KV
+ */
+import { json, limpar, num, normTxt } from './comum.js';
+import { webhook, vinculoNovo, vinculoBuscar, vinculoStatus, alerta } from './bot-responsavel.js';
+
+/* Referência aproximada dos dois terminais, só para descobrir se a lista da SPTrans veio na ordem Lapa → Santa Cruz. */
+const REF_LAPA = [-23.5186, -46.6974], REF_SANTA_CRUZ = [-23.6001, -46.6368];
+const TEMPO_TOTAL_MIN = 82;           // 1h15 a 1h30, média da linha
+
+const MAX_DIST_ROTA_M = 600;          // veículo mais longe que isso da rota é ignorado
+
+function corsHeaders(req, env) {
+  const lista = String(env.ALLOWED_ORIGINS || '*').split(',').map(s => s.trim()).filter(Boolean);
+  const origin = req.headers.get('Origin') || '';
+  const permitido = lista.includes('*') ? '*' : (lista.includes(origin) ? origin : '');
+  const h = { 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Max-Age': '86400', 'Vary': 'Origin' };
+  if (permitido) h['Access-Control-Allow-Origin'] = permitido;
+  return h;
+}
+function comCors(res, cors) {
+  const r = new Response(res.body, res);
+  for (const [k, v] of Object.entries(cors)) r.headers.set(k, v);
+  return r;
+}
+/* ------------------------------------------------------------------ SPTrans (Olho Vivo) */
+
+let sessao = { cookie: '', t: 0 };
+const baseSpt = (env) => String(env.SPTRANS_BASE || 'http://api.olhovivo.sptrans.com.br/v2.1').replace(/\/+$/, '');
+
+async function sptFetch(env, caminho) {
+  for (let tentativa = 0; tentativa < 2; tentativa++) {
+    if (!sessao.cookie || Date.now() - sessao.t > 15 * 60e3 || tentativa) {
+      let a; try { a = await fetch(baseSpt(env) + '/Login/Autenticar?token=' + encodeURIComponent(String(env.SPTRANS_TOKEN).trim()), { method: 'POST' }); } catch (e) { throw new Error('rede'); }
+      const ok = (await a.text()).trim() === 'true';
+      const sc = typeof a.headers.getSetCookie === 'function' ? a.headers.getSetCookie().join('; ') : (a.headers.get('set-cookie') || '');
+      const m = sc.match(/apiCredentials=[^;,\s]+/);
+      if (!ok) throw new Error('login_recusado');
+      if (!m) throw new Error('login_sem_cookie');
+      sessao = { cookie: m[0], t: Date.now() };
+    }
+    let r; try { r = await fetch(baseSpt(env) + caminho, { headers: { Cookie: sessao.cookie } }); } catch (e) { throw new Error('rede'); }
+    if (r.status === 401 || r.status === 403) { sessao.cookie = ''; continue; }
+    if (!r.ok) throw new Error('http_' + r.status);
+    return r.json();
+  }
+  throw new Error('login_recusado');
+}
+
+/** Acha o código da linha 875C-10 no sentido Terminal Lapa → Metrô Santa Cruz. */
+async function candidatosLinha(env) {
+  const lista = await sptFetch(env, '/Linha/Buscar?termosBusca=875C');
+  return (Array.isArray(lista) ? lista : []).filter(x => String(x.lt).toUpperCase() === '875C' && Number(x.tl) === 10);
+}
+async function codigoLinha(env) {
+  if (env.LINHA_CODIGO) return Number(env.LINHA_CODIGO);
+  return (await paradasLinha(env)).codigoLinha;
+}
+
+/* ---------- paradas oficiais da linha (SPTrans), com ordem conferida ---------- */
+const distM = (a, b) => { const R = 6371000, r = x => x * Math.PI / 180, dLa = r(b[0] - a[0]), dLo = r(b[1] - a[1]), h = Math.sin(dLa / 2) ** 2 + Math.cos(r(a[0])) * Math.cos(r(b[0])) * Math.sin(dLo / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
+
+function normalizarParadas(lista) {
+  return (Array.isArray(lista) ? lista : []).map(x => ({
+    codigo: x.cp != null ? x.cp : x.codigo,
+    nome: limpar(x.np != null ? x.np : x.nome, 120),
+    endereco: limpar(x.ed != null ? x.ed : x.endereco, 120),
+    lat: Number(x.py != null ? x.py : x.lat), lng: Number(x.px != null ? x.px : x.lng)
+  })).filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng) && p.lat < 0);
+}
+/** Garante o sentido Terminal Lapa → Metrô Santa Cruz e aponta qualquer coisa estranha na lista. */
+function conferirOrdem(lista) {
+  const alertas = []; let ordenacao = 'sptrans';
+  if (lista.length < 2) return { lista, ordenacao, alertas: ['lista com menos de 2 paradas'] };
+  const a = lista[0], z = lista[lista.length - 1];
+  const dN = distM([a.lat, a.lng], REF_LAPA) + distM([z.lat, z.lng], REF_SANTA_CRUZ);
+  const dR = distM([z.lat, z.lng], REF_LAPA) + distM([a.lat, a.lng], REF_SANTA_CRUZ);
+  if (dR < dN) { lista = [...lista].reverse(); ordenacao = 'invertida'; }
+  if (Math.min(dN, dR) > 4000) alertas.push('as pontas da lista ficam longe dos terminais: confira a ordem');
+  for (let i = 1; i < lista.length; i++) {
+    const d = distM([lista[i - 1].lat, lista[i - 1].lng], [lista[i].lat, lista[i].lng]);
+    if (d > 2500) alertas.push('salto de ' + Math.round(d) + ' m entre as paradas ' + i + ' e ' + (i + 1));
+  }
+  if (new Set(lista.map(p => p.codigo)).size !== lista.length) alertas.push('há paradas repetidas na lista');
+  return { lista, ordenacao, alertas };
+}
+/* Itinerário oficial da SPTrans (tabela "Via" da linha 875C-10), usado só para conferir a lista de paradas e o sentido. */
+const VIAS_IDA = ["R. GUAICURUS", "R. CATÃO", "R. ROMA", "R. NSA. SRA. DA LAPA", "R. PIO XI", "PÇA. OSVALDO ZANINI", "R. VISC. DE INDAIATUBA", "R. DR. JOSÉ ELIAS", "R. JORGE AMERICANO", "R. BARBALHA", "AV. QUEIROZ FILHO", "AV. PE. PEREIRA DE ANDRADE", "AV. DIÓGENES RIBEIRO DE LIMA", "R. DOS MACUNIS", "R. NATINGUI", "AV. PEDROSO DE MORAES", "AV. BRIG. FARIA LIMA", "R. ASPÁSIA", "R. IGUATEMI", "R. TABAPUÃ", "R. DR. RENATO PAES DE BARROS", "AV. PRES. JUSCELINO KUBITSCHEK", "AV. STO. AMARO", "R. STA. JUSTINA", "R. EGITO", "R. AFONSO BRAZ", "R. DIOGO JACOME", "AV. LAVANDISCA", "AV. JAMARIS", "AL. DOS NHAMBIQUARAS", "R. HABERBECK BRANDÃO", "AV. ONZE DE JUNHO", "AV. RUBEM BERTA", "AV. PROF. ASCENDINO REIS", "R. BORGES LAGOA", "R. CEL. LISBOA", "R. PEDRO DE TOLEDO"];
+const VIAS_VOLTA = ["R. LOEFGREEN", "R. MACHADO BITTENCOURT", "R. PEDRO DE TOLEDO", "VIAD. PEDRO DE TOLEDO", "AV. PROF. ASCENDINO REIS", "AL. DOS MARACATINS", "AV. MOEMA", "AV. JURITI", "AV. HÉLIO PELLEGRINO", "R. DIOGO JACOME", "R. AFONSO BRAZ", "AV. STO. AMARO", "PÇA. D. GASTÃO LIBERAL PINTO", "R. JOAQUIM FLORIANO", "R. IGUATEMI", "PÇA. LUÍS CARLOS PARANÁ", "AV. BRIG. FARIA LIMA", "AV. PEDROSO DE MORAES", "R. FERREIRA DE ARAÚJO", "R. DOS MACUNIS", "AV. DIÓGENES RIBEIRO DE LIMA", "AV. PE. PEREIRA DE ANDRADE", "AV. QUEIROZ FILHO", "PÇA. FERNANDO PACHECO DE CASTRO", "R. JASPE-NEGRO", "R. DR. JOSÉ ELIAS", "R. VISC. DE INDAIATUBA", "R. CAATIVA", "R. BAIRI", "R. PIO XI", "R. TITO", "R. FRANCISCO ALVES", "R. JEROAQUARA", "R. FAUSTOLO", "R. SCIPIÃO", "R. GUAICURUS", "R. JOHN HARRISON"];
+const TIPOS_VIA = new Set('r rua av avenida pca praca al alameda viad viaduto dr doutor dra prof professor brig brigadeiro pres presidente pe padre cel coronel gen mal visc visconde sto sta de da do dos das e d ac acesso term terminal'.split(' '));
+const coreVia = (x) => normTxt(x).split(' ').filter(w => w && !TIPOS_VIA.has(w)).join(' ');
+const CORE_IDA = VIAS_IDA.map(coreVia);
+const CORE_SO_VOLTA = [...new Set(VIAS_VOLTA.map(coreVia))].filter(v => v && !CORE_IDA.includes(v) && v !== 'machado bittencourt'); /* "Machado Bittencourt" é nome de parada também na ida */
+const casaVia = (a, b) => !!a && !!b && (a === b || (a.length >= 5 && b.includes(a)) || (b.length >= 5 && a.includes(b)));
+/** Confere a lista de paradas com as ruas do itinerário: ordem da ida e ruas que só existem na volta. */
+function conferirItinerario(lista) {
+  const seq = []; let voltaOnly = 0; const alertas = [];
+  for (const p of lista) {
+    const c = coreVia(String(p.endereco || p.nome || '').replace(/[,]?\s*\d+\s*$/, ''));
+    if (!c) continue;
+    if (CORE_SO_VOLTA.some(v => casaVia(c, v))) { voltaOnly++; continue; }
+    const i = CORE_IDA.findIndex(v => casaVia(c, v));
+    if (i >= 0) seq.push(i);
+  }
+  let invers = 0; for (let k = 1; k < seq.length; k++) if (seq[k] < seq[k - 1]) invers++;
+  if (voltaOnly >= 2) alertas.push(voltaOnly + ' paradas em ruas que só existem no sentido de volta: a lista pode ser do sentido errado');
+  if (invers >= 3) alertas.push('a ordem das paradas não bate com o itinerário oficial (' + invers + ' trechos fora de ordem)');
+  if (seq.length < Math.min(10, lista.length / 3)) alertas.push('poucas paradas casam com as ruas do itinerário oficial (' + seq.length + ')');
+  return { invers, voltaOnly, casadas: seq.length, alertas };
+}
+
+let cacheParadas = { t: 0, dados: null };
+/** Busca as paradas de cada sentido da linha, confere com o itinerário oficial e fica com o sentido Lapa → Santa Cruz. */
+async function paradasLinha(env) {
+  if (!env.GUIA_KV) throw new Error('kv_nao_ligado');
+  if (cacheParadas.dados && Date.now() - cacheParadas.t < 6 * 3600e3) return cacheParadas.dados;
+  const salvo = await env.GUIA_KV.get('cfg:paradas', 'json');
+  if (salvo && salvo.lista && salvo.lista.length >= 2 && salvo.codigoLinha) { cacheParadas = { t: Date.now(), dados: salvo }; return salvo; }
+  const cands = env.LINHA_CODIGO ? [{ cl: Number(env.LINHA_CODIGO) }] : await candidatosLinha(env);
+  if (!cands.length) throw new Error('linha_nao_encontrada');
+  let melhor = null;
+  for (const c of cands) {
+    let bruto; try { bruto = await sptFetch(env, '/Parada/BuscarParadasPorLinha?codigoLinha=' + c.cl); } catch (e) { continue; }
+    const norm = normalizarParadas(bruto); if (norm.length < 2) continue;
+    const ord = conferirOrdem(norm), it = conferirItinerario(ord.lista);
+    const score = it.invers + 3 * it.voltaOnly + ord.alertas.length;
+    if (!melhor || score < melhor.score) melhor = { score, cl: Number(c.cl), sl: c.sl != null ? c.sl : null, ord, it, bruto };
+  }
+  if (!melhor) throw new Error('paradas_vazias');
+  const dados = {
+    codigoLinha: melhor.cl, sentido: melhor.sl, lista: melhor.ord.lista, ordenacao: melhor.ord.ordenacao,
+    alertas: [...melhor.ord.alertas, ...melhor.it.alertas],
+    conferencia: { casadasComItinerario: melhor.it.casadas, trechosForaDeOrdem: melhor.it.invers, ruasSoDaVolta: melhor.it.voltaOnly },
+    amostraBruta: Array.isArray(melhor.bruto) ? melhor.bruto[0] : null
+  };
+  await env.GUIA_KV.put('cfg:paradas', JSON.stringify(dados), { expirationTtl: 86400 });
+  cacheParadas = { t: Date.now(), dados };
+  return dados;
+}
+
+/* Previsão oficial da SPTrans naquela parada: horários previstos por ônibus (como na tela "80350 às 12:20"). */
+const minDoDia = (hhmm) => { const m = String(hhmm || '').match(/^(\d{1,2}):(\d{2})$/); return m ? (+m[1]) * 60 + (+m[2]) : null; };
+function coletarVeiculos(obj, prof = 0, saida = []) {
+  if (!obj || typeof obj !== 'object' || prof > 6) return saida;
+  if (Array.isArray(obj)) { obj.forEach(o => coletarVeiculos(o, prof + 1, saida)); return saida; }
+  if (Array.isArray(obj.vs)) obj.vs.forEach(v => { if (v && v.t) saida.push(v); });
+  for (const v of Object.values(obj)) if (v && typeof v === 'object') coletarVeiculos(v, prof + 1, saida);
+  return saida;
+}
+const cacheOficial = new Map();
+async function previsaoOficial(env, cl, cp) {
+  const chave = cl + ':' + cp, c = cacheOficial.get(chave);
+  if (c && Date.now() - c.t < 20000) return c.v;
+  const r = await sptFetch(env, '/Previsao?codigoParada=' + encodeURIComponent(cp) + '&codigoLinha=' + cl);
+  const agora = minDoDia(r && r.hr); let v = null;
+  if (agora != null) {
+    const lista = coletarVeiculos(r).map(x => {
+      const m = minDoDia(x.t); if (m == null) return null;
+      let d = m - agora; if (d < -720) d += 1440; if (d > 720) d -= 1440;
+      return { minutos: Math.max(0, d), hora: x.t };
+    }).filter(Boolean).sort((a, b) => a.minutos - b.minutos);
+    if (lista.length) {
+      let intervalo = null;
+      if (lista.length >= 2) { let s = 0; for (let i = 1; i < lista.length; i++) s += lista[i].minutos - lista[i - 1].minutos; intervalo = Math.max(1, Math.round(s / (lista.length - 1))); }
+      v = { passagens: lista.slice(0, 3), intervalo, veiculos: lista.length, hr: r.hr };
+    }
+  }
+  cacheOficial.set(chave, { t: Date.now(), v });
+  return v;
+}
+
+/* Geometria: posição do veículo ao longo da linha poligonal formada pelas paradas. */
+const LAT0 = -23.55, KX = 111320 * Math.cos(LAT0 * Math.PI / 180), KY = 110540;
+const xy = (lat, lng) => [lng * KX, lat * KY];
+function projetar(P, lat, lng) {
+  const [px, py] = xy(lat, lng);
+  let melhor = null;
+  for (let i = 0; i < P.length - 1; i++) {
+    const [ax, ay] = xy(P[i].lat, P[i].lng), [bx, by] = xy(P[i + 1].lat, P[i + 1].lng);
+    const dx = bx - ax, dy = by - ay, len2 = dx * dx + dy * dy;
+    const t = len2 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len2)) : 0;
+    const d = Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+    if (!melhor || d < melhor.d) melhor = { frac: i + t, d };
+  }
+  return melhor; // frac: 0 = primeira parada, N-1 = última
+}
+const distParada = (P, lat, lng, i) => distM([lat, lng], [P[i].lat, P[i].lng]);
+
+let cachePos = { t: 0, dados: null };
+async function posicoes(env) {
+  if (cachePos.dados && Date.now() - cachePos.t < 15000) return cachePos.dados;
+  const cl = await codigoLinha(env);
+  const r = await sptFetch(env, '/Posicao/Linha?codigoLinha=' + cl);
+  const vs = Array.isArray(r && r.vs) ? r.vs : (Array.isArray(r && r.l) ? r.l.flatMap(x => x.vs || []) : []);
+  cachePos = { t: Date.now(), dados: { hr: r && r.hr, vs } };
+  return cachePos.dados;
+}
+
+async function previsao(url, env) {
+  if (!env.SPTRANS_TOKEN) return json({ erro: 'sem_token' }, 503);
+  let P, pos;
+  try { P = (await paradasLinha(env)).lista; pos = await posicoes(env); } catch (e) { return json({ erro: 'sptrans_indisponivel', motivo: motivoErro(e) }, 502); }
+  const N = P.length, minPorParada = TEMPO_TOTAL_MIN / Math.max(1, N - 1);
+
+  /* qual é a parada pedida: pela posição (confiável mesmo se o app tiver outra lista) ou pelo número, se existir na lista */
+  const lat = num(url.searchParams.get('lat'), -90, 90), lng = num(url.searchParams.get('lng'), -180, 180);
+  let alvo = -1;
+  if (lat != null && lng != null) {
+    let melhor = null;
+    for (let i = 0; i < N; i++) { const d = distParada(P, lat, lng, i); if (!melhor || d < melhor.d) melhor = { i, d }; }
+    if (melhor && melhor.d <= 600) alvo = melhor.i;
+  }
+  if (alvo < 0) { const id = Number(url.searchParams.get('parada')); if (Number.isInteger(id) && id >= 1 && id <= N) alvo = id - 1; }
+  if (alvo < 0) return json({ erro: 'parada_nao_encontrada' }, 404);
+
+  /* 1º: previsão oficial da SPTrans para esta parada (horários previstos de cada ônibus) */
+  try {
+    const of = await previsaoOficial(env, await codigoLinha(env), P[alvo].codigo);
+    if (of) return json({ fonte: 'sptrans', veiculos: of.veiculos, noTerminal: 0, passagens: of.passagens, intervalo: of.intervalo, atualizadoEm: of.hr });
+  } catch (e) { /* cai para a estimativa pela posição */ }
+
+  const naRota = []; let noTerminal = 0;
+  for (const v of pos.vs) {
+    const vlat = Number(v.py), vlng = Number(v.px);
+    if (!Number.isFinite(vlat) || !Number.isFinite(vlng)) continue;
+    const pr = projetar(P, vlat, vlng);
+    if (pr.d > MAX_DIST_ROTA_M) continue;
+    if (distParada(P, vlat, vlng, 0) < 250) { noTerminal++; naRota.push({ frac: pr.frac, terminal: true }); continue; }
+    naRota.push({ frac: pr.frac, terminal: false });
+  }
+  const rodando = naRota.filter(v => !v.terminal).sort((a, b) => a.frac - b.frac);
+
+  const passagens = rodando.map(v => alvo - v.frac).filter(pa => pa >= -0.3).sort((a, b) => a - b).slice(0, 3)
+    .map(pa => { const paradasAte = Math.max(0, Math.round(pa)); return { paradasAte, minutos: paradasAte === 0 ? 0 : Math.max(1, Math.round(paradasAte * minPorParada)), estimado: true }; });
+
+  let intervalo = null;
+  if (rodando.length >= 2) {
+    let soma = 0;
+    for (let i = 1; i < rodando.length; i++) soma += rodando[i].frac - rodando[i - 1].frac;
+    intervalo = Math.max(1, Math.round((soma / (rodando.length - 1)) * minPorParada));
+  }
+  return json({ estimado: true, fonte: 'posicao', veiculos: naRota.length, noTerminal, passagens, intervalo, atualizadoEm: pos.hr || null });
+}
+
+/** Lista oficial de paradas da linha (Olho Vivo), já na ordem Terminal Lapa → Metrô Santa Cruz. O app lê esta rota ao abrir. */
+async function paradasInfo(env) {
+  if (!env.SPTRANS_TOKEN) return json({ erro: 'sem_token' }, 503);
+  try {
+    const d = await paradasLinha(env);
+    return json({
+      codigoLinha: d.codigoLinha, sentido: d.sentido, total: d.lista.length, ordenacao: d.ordenacao, alertas: d.alertas, conferencia: d.conferencia,
+      tempoTotalMin: TEMPO_TOTAL_MIN,
+      paradas: d.lista.map((x, i) => ({ ordem: i + 1, ...x })),
+      amostraBruta: d.amostraBruta
+    });
+  } catch (e) { return json({ erro: 'sptrans_indisponivel', motivo: motivoErro(e) }, 502); }
+}
+
+async function linhaInfo(env) {
+  if (!env.SPTRANS_TOKEN) return json({ erro: 'sem_token' }, 503);
+  try {
+    const c = await candidatosLinha(env);
+    return json({ escolhida: env.LINHA_CODIGO ? Number(env.LINHA_CODIGO) : await codigoLinha(env), candidatos: c });
+  } catch (e) { return json({ erro: 'sptrans_indisponivel', motivo: motivoErro(e) }, 502); }
+}
+
+/** Diz por que falhou, sem mostrar nenhum segredo. */
+const motivoErro = (e) => (/^(login_|rede$|http_|kv_|linha_|paradas_)/.test(String(e && e.message)) ? e.message : 'desconhecido');
+const MOTIVOS = { login_recusado: 'a SPTrans recusou o token (confira se foi copiado inteiro, sem espaço, e se é o token da API Olho Vivo)', login_sem_cookie: 'a SPTrans aceitou o login mas não devolveu o cookie de sessão', rede: 'o servidor não conseguiu falar com a SPTrans', kv_nao_ligado: 'o banco GUIA_KV não está ligado ao worker (Settings → Bindings)', linha_nao_encontrada: 'a SPTrans não achou a linha 875C-10 na busca', paradas_vazias: 'a SPTrans não devolveu paradas para a linha' };
+
+/** Testa cada peça (banco, tokens, SPTrans, Telegram) e mostra só o resultado: nunca os valores. */
+async function diagnostico(env) {
+  const r = {
+    banco_GUIA_KV: env.GUIA_KV ? 'ligado' : 'NÃO LIGADO (Settings → Bindings → KV namespace, nome GUIA_KV)',
+    BOT_USERNAME: env.BOT_USERNAME ? 'ok (' + env.BOT_USERNAME + ')' : 'FALTA (variável de texto, nome do bot sem @)',
+    TELEGRAM_BOT_TOKEN: env.TELEGRAM_BOT_TOKEN ? 'configurado' : 'FALTA (Secret)',
+    TELEGRAM_WEBHOOK_SECRET: env.TELEGRAM_WEBHOOK_SECRET ? 'configurado' : 'FALTA (Secret)',
+    SPTRANS_TOKEN: env.SPTRANS_TOKEN ? (String(env.SPTRANS_TOKEN) !== String(env.SPTRANS_TOKEN).trim() ? 'configurado, mas com espaço no começo ou no fim (o servidor já ignora o espaço)' : 'configurado') : 'FALTA (Secret)'
+  };
+  if (env.SPTRANS_TOKEN) {
+    try {
+      const a = await fetch(baseSpt(env) + '/Login/Autenticar?token=' + encodeURIComponent(String(env.SPTRANS_TOKEN).trim()), { method: 'POST' });
+      const corpo = (await a.text()).trim().slice(0, 30), cookie = /apiCredentials=/.test(typeof a.headers.getSetCookie === 'function' ? a.headers.getSetCookie().join(';') : (a.headers.get('set-cookie') || ''));
+      r.SPTrans_login = { http: a.status, resposta: corpo, cookie: cookie ? 'recebido' : 'não recebido', veredito: corpo === 'true' && cookie ? 'OK' : MOTIVOS[corpo === 'true' ? 'login_sem_cookie' : 'login_recusado'] };
+    } catch (e) { r.SPTrans_login = { veredito: MOTIVOS.rede, detalhe: String((e && e.message) || e).slice(0, 80) }; }
+  }
+  if (env.TELEGRAM_BOT_TOKEN) {
+    try {
+      const base = 'https://api.telegram.org/bot' + String(env.TELEGRAM_BOT_TOKEN).trim() + '/';
+      const me = await (await fetch(base + 'getMe')).json();
+      r.Telegram_bot = me.ok ? 'ok (@' + me.result.username + ')' : 'TOKEN RECUSADO pelo Telegram: ' + String(me.description || '').slice(0, 60);
+      if (me.ok) {
+        const w = await (await fetch(base + 'getWebhookInfo')).json();
+        const i = w.result || {};
+        r.Telegram_webhook = { ligado_a: i.url || 'NENHUM (falta fazer o setWebhook)', mensagens_na_fila: i.pending_update_count || 0, ultimo_erro: i.last_error_message || 'nenhum' };
+      }
+    } catch (e) { r.Telegram_bot = 'não consegui falar com o Telegram'; }
+  }
+  return json(r);
+}
+
+/* ------------------------------------------------------------------ roteamento */
+
+export default {
+  async fetch(req, env) {
+    const url = new URL(req.url), cors = corsHeaders(req, env);
+    if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
+    try {
+      const p = url.pathname, m = req.method;
+      let res;
+      if (p === '/diagnostico' && m === 'GET') res = await diagnostico(env);
+      else if (!env.GUIA_KV && p !== '/') res = json({ erro: 'kv_nao_ligado', motivo: MOTIVOS.kv_nao_ligado }, 503);
+      else if (p === '/telegram/webhook' && m === 'POST') res = await webhook(req, env);
+      else if (p === '/vinculo/novo' && m === 'POST') res = await vinculoNovo(req, env);
+      else if (p === '/vinculo/buscar' && m === 'POST') res = await vinculoBuscar(req, env);
+      else if (p === '/vinculo/status' && m === 'GET') res = await vinculoStatus(url, env);
+      else if (p === '/alerta' && m === 'POST') res = await alerta(req, env);
+      else if (p === '/previsao' && m === 'GET') res = await previsao(url, env);
+      else if (p === '/linha' && m === 'GET') res = await linhaInfo(env);
+      else if (p === '/paradas' && m === 'GET') res = await paradasInfo(env);
+      else if (p === '/' && m === 'GET') res = json({ ok: true, servico: 'guia-api', bot: '@' + (env.BOT_USERNAME || '') });
+      else res = json({ erro: 'nao_encontrado' }, 404);
+      return comCors(res, cors);
+    } catch (e) {
+      return comCors(json({ erro: 'interno' }, 500), cors);
+    }
+  }
+};
