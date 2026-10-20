@@ -357,7 +357,7 @@ function escolherEntre(textoFalado, candidatas) {
   const nums = n.match(/\b\d{1,4}\b/g) || [];
   for (const x of nums) {
     const porEnd = candidatas.filter(c => (c.numeros || []).indexOf(x) >= 0); if (porEnd.length === 1) return porEnd[0];
-    if (+x <= 46) { const porId = candidatas.filter(c => c.id === +x); if (porId.length === 1) return porId[0]; }
+    if (+x <= STOPS.length) { const porId = candidatas.filter(c => c.id === +x); if (porId.length === 1) return porId[0]; }
   }
   const palavras = _limpar(textoFalado), junto = palavras.join(" ");
   const pont = candidatas.map(parada => ({ parada, p: _pontuar(parada, palavras, junto).pontuacao })).filter(x => x.p >= _PARCIAL).sort((a, b) => b.p - a.p);
@@ -376,7 +376,7 @@ function listarParadas() { return LINHA_875C10.paradas; }
 /** Autoverificação da ordem: ids 1..46 em sequência, sem repetição, com coordenadas. Devolve a lista de problemas (vazia = ok). */
 function validarLinha() {
   const erros = [], ps = LINHA_875C10.paradas;
-  if (ps.length !== 46) erros.push("esperadas 46 paradas, há " + ps.length);
+  if (ps.length < 2) erros.push("lista com menos de 2 paradas: " + ps.length);
   ps.forEach((p, i) => {
     if (p.id !== i + 1) erros.push("ordem quebrada na posição " + (i + 1) + " (id " + p.id + ")");
     if (typeof p.lat !== "number" || typeof p.lng !== "number") erros.push("sem coordenadas: " + p.id);
@@ -391,7 +391,8 @@ if (typeof module !== "undefined") {
 </script>
 <script>
 /* Fonte da previsão dos ônibus (tempo real). Cole aqui o endereço do intermediário (veja previsao-worker.js). Vazio = sem previsão. */
-window.GUIA_CONFIG = window.GUIA_CONFIG || { previsaoUrl: 'https://guia-previsao.nicoleanny37.workers.dev' };
+/* apiUrl = endereço do servidor intermediário (guia-api): Telegram do responsável + previsão. Veja guia-api/README.md. */
+window.GUIA_CONFIG = window.GUIA_CONFIG || { previsaoUrl: 'https://guia-previsao.nicoleanny37.workers.dev', apiUrl: '' };
 </script>
 <script>
 'use strict';
@@ -399,6 +400,9 @@ window.GUIA_CONFIG = window.GUIA_CONFIG || { previsaoUrl: 'https://guia-previsao
    Única exceção: na emergência aparece um botão real "Ligar", como alternativa à voz (fora do aria-hidden, acessível ao leitor de tela). */
 /* A ordem e os dados das 46 paradas vêm do arquivo mestre linha875c10.js */
 const STOPS = LINHA_875C10.paradas;
+const PARADAS_EMBUTIDAS = STOPS.slice(); /* lista aproximada que vem no arquivo; só vale se a oficial não carregar */
+/* A linha leva 1h15 a 1h30 (média de 82 min) de ponta a ponta: minutos por parada = 82 ÷ (paradas − 1). */
+const minPorParada = () => 82 / Math.max(1, STOPS.length - 1);
 const nm = s => s.nome_curto;
 const $ = id => document.getElementById(id);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -417,7 +421,7 @@ let prefs = store.get('prefs') || {};
 const EMG = { exibir: '(11) 99906-7415', falar: 'onze, nove nove nove zero seis, sete quatro um cinco', tel: '+5511999067415' };
 /* Previsão SIMULADA do ônibus. segPorMin = segundos reais de cada minuto simulado (6 = demonstração acelerada; 60 = tempo real).
    O relógio simulado para enquanto o Guia fala. Não existe ligação com dados reais aqui: tudo é identificado como simulado. */
-const BUS = { minutos: 5, segPorMin: 6, linha: '875C-10', sentido: 'Metrô Santa Cruz' };
+const BUS = { minutos: 5, segPorMin: 6, intervalo: 24, linha: '875C-10', sentido: 'Metrô Santa Cruz' };
 
 /* ---------- tela: telas dos mockups (ouvindo, confirmação, trajeto, ônibus chegando, chegada). Só espelha a voz; nada é tocável. ---------- */
 const IC = { mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>', bus: '<rect x="4" y="3" width="16" height="14" rx="3"/><path d="M4 11h16M8 17v3M16 17v3"/><circle cx="8" cy="14" r=".6"/><circle cx="16" cy="14" r=".6"/>', check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>', pin: '<path d="M12 21s7-6.2 7-11a7 7 0 0 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/>', vol: '<path d="M4 10v4h3l4 3V7l-4 3H4z"/><path d="M15 9a4 4 0 0 1 0 6M17.5 6.5a8 8 0 0 1 0 11"/>', alert: '<path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17v.5"/>', clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', bars: '<path d="M6 10v4M10 6v12M14 9v6M18 7v10"/>', pencil: '<path d="M4 20l4-1L19 8l-3-3L5 16z"/>', vib: '<rect x="8" y="4" width="8" height="16" rx="2"/><path d="M4 8v8M20 8v8"/>', phone: '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/>', shield: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M12 8v5M12 16v.5"/>' };
@@ -450,7 +454,7 @@ function show(name, d) {
   if (!isEmg) { S.view = name; S.vdata = d || {}; d = S.vdata; } else d = d || {};
   const ph = $('phone'), v = $('view');
   const busWarm = name === 'bus' && S.bus && S.bus.ph !== 'far';
-  ph.className = 'phone' + (name === 'near' || busWarm ? ' tone-yellow' : name === 'arrive' ? ' tone-mint' : name === 'emg' ? ' tone-red' : '');
+  ph.className = 'phone' + (name === 'near' || busWarm || (name === 'espera' && S.bus && S.bus.ph !== 'far') ? ' tone-yellow' : name === 'arrive' ? ' tone-mint' : name === 'emg' ? ' tone-red' : '');
   const vst = vibStatus();
   const snd = '<p class="fine">' + ic('vol') + (vst === 'disponivel' ? ic('vib') + 'Som e vibração ligados' : vst === 'desligada' ? 'Som ativo · vibração desligada' : vst === 'sem-suporte' ? 'Som ativo · sem vibração neste aparelho' : 'Som ativo · toque na tela para liberar a vibração') + '</p>';
   const micPill = '<div class="btn">' + ic('mic') + '<span data-pill-txt>' + PILL[S.st || 'idle'][0] + '</span></div>';
@@ -465,7 +469,7 @@ function show(name, d) {
     const num = e.dialed === '190' ? 'Polícia: 190' : EMG.exibir;
     h = '<span class="badge-top">' + ic('shield') + (sim ? 'Simulação de emergência' : 'Emergência') + '</span><div class="grow"></div><div class="big-badge" style="margin:8px auto 20px" aria-hidden="true">' + ic('phone') + '</div>' +
       '<h1 class="h1 big c">Alerta de emergência ativado</h1><p class="sub strong c">' + (abrindo ? 'Abrindo o discador…<br>Diga “foi sem querer” para cancelar.' : 'Discador aberto. Toque em ligar para completar a chamada.') + '</p><p class="h1 s c" style="margin:0">' + esc(num) + '</p>' +
-      '<p class="sub c" style="font-size:15px;color:var(--text)">' + (sim ? 'Simulação, mas o número é real. ' : '') + 'A ligação só acontece se você tocar em ligar. O GuIa não envia localização nem mensagens.</p>' +
+      '<p class="sub c" style="font-size:15px;color:var(--text)">' + (sim ? 'Simulação, mas o número é real. ' : '') + 'A ligação só acontece se você tocar em ligar. ' + tgTexto() + '</p>' +
       '<div class="grow"></div><div class="btn o">Diga: estou seguro</div><p class="sub c" style="font-size:15px">Diga “repetir” para ouvir de novo.</p>';
   } else if (name === 'bus') {
     const b = S.bus || {}, bp = b.ph || 'far', m = Math.max(0, Math.ceil(b.left || 0)), pct = Math.round(Math.max(0, Math.min(1, 1 - (b.left || 0) / BUS.minutos)) * 360);
@@ -483,6 +487,13 @@ function show(name, d) {
         '<p class="sub strong c">' + (near ? 'Previsão simulada: cerca de 1 minuto<br>Prepare-se para embarcar' : 'Confirme a linha ' + esc(BUS.linha) + ' com o motorista') + '</p>' +
         '<div class="tip"><b>Ao subir</b>Cuidado com o degrau e segure no corrimão.</div><div class="grow"></div><div class="acts">' + micPill + '</div>' + snd;
     }
+  } else if (name === 'espera') {
+    const b = S.bus || {}, m = b.min;
+    h = '<div class="top">' + LOGO + pillHTML() + '</div><div class="head"><span class="bb">' + ic('bus') + '</span><h1>Aguardando o ônibus</h1></div>' +
+      '<p class="sub" style="color:var(--text)">Linha ' + esc(BUS.linha) + ' · sentido ' + esc(BUS.sentido) + '</p>' +
+      '<div class="ring" style="background:conic-gradient(var(--ok) 0deg,var(--line) 0)"><div><b>' + (m != null ? m : '…') + '</b><small>min (estimativa)</small></div></div>' +
+      '<ol class="tl"><li><span class="node pin">' + ic('pin') + '</span><div><small>PONTO · EMBARQUE</small><b>' + esc(b.stop ? nm(b.stop) : '') + '</b></div></li></ol>' +
+      '<div class="tip"><b>Ao embarcar</b>Cuidado com o degrau e segure no corrimão.</div><div class="grow"></div><div class="acts">' + micPill + '</div>' + snd;
   } else if (name === 'walk') {
     const w = S.walk || {};
     h = simNote() + '<div class="head"><span class="bb">' + PERSON + '</span><h1>Vá até o ponto</h1></div>' +
@@ -498,6 +509,11 @@ function show(name, d) {
       '<p class="sub">' + (d.frame ? 'O Guia está aberto dentro de outra página, e o navegador não libera o microfone ali.' : 'Libere uma vez e ele passa a começar sozinho.') + '</p>' +
       '<div class="cards">' + steps.map((s, i) => '<div class="card"><span class="badge" style="font-weight:800;font-size:20px">' + (i + 1) + '</span><div><b style="font-size:17px">' + esc(s) + '</b></div></div>').join('') + '</div>' +
       '<div class="grow"></div><p class="sub c">Assim que liberar, eu percebo sozinho. Ou diga “Pronto”.</p>';
+  } else if (name === 'vincular') {
+    h = '<div class="top">' + LOGO + pillHTML() + '</div><h1 class="h1 big" style="margin-top:8px">Vincular responsável</h1>' +
+      '<p class="sub">' + esc(d.quem || '') + '</p>' +
+      '<div class="card"><span class="badge">' + ic('shield') + '</span><div><b>' + esc(d.msg || 'Procurando no bot…') + '</b><span>Bot do Telegram: ' + esc(d.bot || '') + '</span></div></div>' +
+      '<div class="grow"></div><p class="sub strong" data-cap>' + esc(S.cap || '') + '</p><p class="sub">Diga pular para fazer isso depois.</p>';
   } else if (name === 'say') {
     h = simNote() + '<div class="top">' + LOGO + '' + pillHTML() + '</div><div class="grow"></div>' + ic('mic').replace('class="ic"', 'class="ic" style="font-size:44px"') +
       '<h1 class="h1" data-cap>' + esc(S.cap || '') + '</h1>' + (d.hint ? '<p class="sub">' + esc(d.hint) + '</p>' : '') +
@@ -512,7 +528,7 @@ function show(name, d) {
       '<div class="row">' + ic('bus') + '<span>Linha 875C-10, saindo de ' + esc(d.from) + '</span></div><div class="row">' + ic('clock') + '<span>Cerca de ' + d.mins + ' minutos (estimativa)</span></div>' +
       '<div class="grow"></div><div class="acts"><div class="btn">' + ic('check') + 'Diga: sim, confirmar</div><div class="btn o">' + ic('pencil') + 'Diga: não, corrigir</div></div>';
   } else if (name === 'route') {
-    const n = S.nav, s = STOPS[n.idx], l = n.dest.id - s.id, mins = Math.max(1, Math.round(l * 1.83));
+    const n = S.nav, s = STOPS[n.idx], l = n.dest.id - s.id, mins = Math.max(1, Math.round(l * minPorParada()));
     const items = [];
     if (n.idx > n.origin.id - 1) items.push('<li class="done"><span class="node ok">' + ic('check') + '</span><div><b>' + esc(nm(n.origin)) + '</b><small>Embarque · feito</small></div></li>');
     items.push('<li><span class="node here"></span><div><small>' + (n.paused ? 'PAUSADO · VOCÊ ESTÁ AQUI' : 'VOCÊ ESTÁ AQUI') + '</small><b>' + esc(nm(s)) + '</b></div></li>');
@@ -593,22 +609,48 @@ function notify(title, body) { try { if (prefs.notif && window.Notification && N
 
 /* ---------- fala (SpeechSynthesis) ---------- */
 let voice = null, spTok = 0, speaking = false, speechBlocked = false;
-function pickVoice() { const v = speechSynthesis.getVoices(); voice = v.find(x => /pt-BR/i.test(x.lang) && /google|luciana|francisca|microsoft/i.test(x.name)) || v.find(x => /pt[-_]BR/i.test(x.lang)) || v.find(x => /^pt/i.test(x.lang)) || null; }
+const MOBILE = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+function pickVoice() {
+  const todas = speechSynthesis.getVoices().filter(x => /^pt/i.test(x.lang)), br = todas.filter(x => /pt[-_]BR/i.test(x.lang)), pool = br.length ? br : todas;
+  const boa = x => /google|luciana|francisca|microsoft|natural/i.test(x.name);
+  /* No celular, a voz local (sem rede) começa a falar bem mais rápido; no notebook, a de melhor qualidade. */
+  voice = (MOBILE && (pool.find(x => x.localService && boa(x)) || pool.find(x => x.localService))) || pool.find(boa) || pool[0] || null;
+}
 if ('speechSynthesis' in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
 let lastEnd = 0;
 function speak(text, o) {
   return new Promise(res => {
     S.lastSpoken = norm(text);
-    if (S.emg && S.emg.phase && !(o && o.force)) { res(); return; } /* durante o alerta de emergência só falam as mensagens da própria emergência (force) */
-    setCaption(text); const my = ++spTok; speaking = true; setState('speaking');
-    let done = false, wd;
-    const fin = () => { if (done) return; done = true; clearTimeout(wd); if (my === spTok) { speaking = false; lastEnd = Date.now(); setState(recRunning ? 'listening' : 'idle'); startRec(); } res(); };
-    if (!('speechSynthesis' in window)) { wd = setTimeout(fin, 800 + text.length * 60); return; }
+    if (S.emg && S.emg.phase && !(o && o.force)) { res(); return; }
+    setCaption(text);
+    const my = ++spTok, tSpeak = performance.now();
+    speaking = true;
+    setState('speaking');
+    /* Evita que o microfone reconheça a própria voz do GuIa. */
+    stopRec();
+    let done = false, wd, launch;
+    const fin = () => {
+      if (done) return;
+      done = true;
+      clearTimeout(wd);
+      clearTimeout(launch);
+      if (my === spTok) {
+        speaking = false;
+        lastEnd = Date.now();
+        setState('idle');
+        if (S.micOK && !S.blocked) startRec();
+      }
+      res();
+    };
+    if (!('speechSynthesis' in window)) { wd = setTimeout(fin, Math.min(1200, 300 + text.length * 25)); return; }
     try { speechSynthesis.cancel(); } catch (e) {}
-    const u = new SpeechSynthesisUtterance(text); u.lang = 'pt-BR'; u.rate = .98; if (voice) u.voice = voice;
-    u.onend = fin; u.onerror = e => { if (e && e.error === 'not-allowed') speechBlocked = true; fin(); };
-    wd = setTimeout(fin, 2500 + text.length * 130);
-    setTimeout(() => { try { speechSynthesis.speak(u); } catch (e) { fin(); } }, 60);
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'pt-BR'; u.rate = 1.04; if (voice) u.voice = voice;
+    u.onstart = () => { try { LAT.voz(Math.round(performance.now() - tSpeak)); } catch (e) {} };
+    u.onend = fin;
+    u.onerror = e => { if (e && e.error === 'not-allowed') speechBlocked = true; fin(); };
+    wd = setTimeout(fin, 2200 + text.length * 115);
+    launch = setTimeout(() => { try { speechSynthesis.speak(u); } catch (e) { fin(); } }, 0);
   });
 }
 /* Alguns navegadores só liberam a voz depois do primeiro gesto na página. Se isso acontecer, qualquer toque ou tecla libera; o Guia repete sozinho. */
@@ -619,24 +661,99 @@ function speak(text, o) {
 
 /* ---------- escuta (SpeechRecognition): sempre ativa, inclusive enquanto o Guia fala (para a palavra de emergência) ---------- */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-let rec = null, recRunning = false, waiter = null, mainHandler = null;
-function startRec() {
-  if (!SR || recRunning || !S.micOK) return;
-  const r = new SR(); r.lang = 'pt-BR'; r.continuous = true; r.interimResults = false; r.maxAlternatives = 3; rec = r;
-  try { if ('processLocally' in r) r.processLocally = !navigator.onLine && !S.noLocal; } catch (e) {} /* sem internet, usa o reconhecimento do próprio aparelho, se houver */
-  r.onstart = () => { recRunning = true; if (!speaking) setState('listening'); };
-  r.onspeechstart = () => { if (!speaking) S.ouvindoFala = Date.now(); }; /* a pessoa começou a falar: os avisos da simulação esperam */
-  r.onspeechend = () => { S.ouvindoFala = 0; };
-  r.onresult = e => { S.ouvindoFala = 0; for (let i = e.resultIndex; i < e.results.length; i++) if (e.results[i].isFinal) { const alts = Array.from(e.results[i]).map(a => a.transcript).filter(Boolean); if (alts.length) deliver(alts); } };
-  r.onerror = e => { if (e.error === 'language-not-supported') S.noLocal = true; if (e.error === 'not-allowed' || e.error === 'service-not-allowed') { S.micOK = false; S.blocked = true; setState('blocked'); } };
-  r.onend = () => { S.ouvindoFala = 0; if (rec !== r) return; recRunning = false; if (S.micOK) setTimeout(startRec, 250); };
-  try { r.start(); recRunning = true; } catch (e) { recRunning = false; }
+/* Reconhecimento no próprio aparelho (mais rápido e funciona sem rede), quando o navegador já tem o pacote do português. */
+(async () => { try { if (SR && typeof SR.available === 'function') S.localOK = (await SR.available({ langs: ['pt-BR'], processLocally: true })) === 'available'; } catch (e) {} })();
+let rec = null, recRunning = false, waiter = null, mainHandler = null, recRestartTimer = null;
+/* ---------- medição de velocidade: fim da sua fala → entrega do texto → começo da resposta em voz ---------- */
+const LAT = {
+  t: {}, rows: [], micOpen: null, via: '',
+  mark(k) { this.t[k] = performance.now(); },
+  voz(iniciarVoz) {
+    const t = this.t; if (!t.entrega) return;
+    const base = t.fimFala && t.fimFala <= t.entrega ? t.fimFala : (t.parcial && t.parcial <= t.entrega ? t.parcial : t.entrega);
+    const row = { via: this.via || '?', esperaMs: Math.round(t.entrega - base), processaMs: Math.round(performance.now() - t.entrega), vozMs: iniciarVoz, micMs: this.micOpen };
+    this.rows.push(row); if (this.rows.length > 30) this.rows.shift(); this.t = {}; this.painel(row);
+  },
+  resumo() {
+    const med = k => { const v = this.rows.map(r => r[k]).filter(x => x != null).sort((a, b) => a - b); return v.length ? v[v.length >> 1] : null; };
+    return { amostras: this.rows.length, esperaMs: med('esperaMs'), processaMs: med('processaMs'), vozMs: med('vozMs'), micMs: med('micMs') };
+  },
+  painel(row) {
+    if (!/[?&]debug/.test(location.search)) return;
+    let d = document.getElementById('latdbg');
+    if (!d) { d = document.createElement('div'); d.id = 'latdbg'; d.setAttribute('aria-hidden', 'true'); d.style.cssText = 'position:fixed;left:6px;top:6px;z-index:99;background:#000c;color:#0f0;font:11px/1.3 monospace;padding:6px 8px;border-radius:6px;pointer-events:none;white-space:pre'; document.body.appendChild(d); }
+    const m = this.resumo();
+    d.textContent = 'via ' + row.via + ' | espera ' + row.esperaMs + ' | proc ' + row.processaMs + ' | voz ' + row.vozMs + ' | mic ' + row.micMs + '\nmediana(' + m.amostras + '): espera ' + m.esperaMs + ' | proc ' + m.processaMs + ' | voz ' + m.vozMs;
+  }
+};
+/* Respostas curtas e a palavra de emergência não esperam o navegador "fechar" a frase: agem no resultado parcial, depois que ele fica estável. */
+const FAST_RE = /^(sim|nao|pular|depois|repetir|pronto|continuar|parar|pausar|cancelar|ajuda|certo|ok|isso|confirmar|corrigir|normal|real|simulacao|avancar)$/;
+const FAST_MS = 280;
+let recSid = 0, interimT = null; const fastDone = new Map();
+function agendarRapido(alts, key) {
+  clearTimeout(interimT);
+  if (E.phase || speaking) return;
+  LAT.mark('parcial');
+  interimT = setTimeout(async () => {
+    if (E.phase || speaking || fastDone.has(key)) return;
+    const n = norm(alts[0]); let ok = false;
+    try { ok = !!(await emgMatch(alts)); } catch (e) {}
+    if (!ok && RE_SOCORRO.test(n) && !echoText(n)) ok = true;
+    if (!ok && !S.secret && (waiter || mainHandler) && FAST_RE.test(n)) ok = true;
+    if (!ok || E.phase || speaking) return;
+    const now = Date.now(); for (const [k, t] of fastDone) if (now - t > 15000) fastDone.delete(k);
+    fastDone.set(key, now); LAT.via = 'rapido'; deliver(alts); /* o resultado final desta mesma fala será ignorado, para não contar duas vezes */
+  }, FAST_MS);
 }
-function stopRec() { const r = rec; rec = null; recRunning = false; if (r) { r.onend = r.onresult = r.onerror = r.onstart = null; try { r.abort(); } catch (e) {} } }
-
+function startRec() {
+  if (!SR || recRunning || !S.micOK || S.blocked || speaking) return;
+  if (recRestartTimer) { clearTimeout(recRestartTimer); recRestartTimer = null; }
+  const r = new SR(), sid = ++recSid; r.lang = 'pt-BR'; r.continuous = true; r.interimResults = true; r.maxAlternatives = 3; rec = r;
+  try { if ('processLocally' in r) r.processLocally = !S.noLocal && (!!S.localOK || !navigator.onLine); } catch (e) {}
+  const t0 = performance.now();
+  r.onstart = () => { recRunning = true; LAT.micOpen = Math.round(performance.now() - t0); if (!speaking) setState('listening'); };
+  r.onspeechstart = () => { if (!speaking) S.ouvindoFala = Date.now(); };
+  r.onspeechend = () => { S.ouvindoFala = 0; LAT.mark('fimFala'); };
+  r.onresult = e => {
+    S.ouvindoFala = 0;
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const res = e.results[i], alts = Array.from(res).map(a => a.transcript).filter(Boolean);
+      if (!alts.length) continue;
+      const key = sid + ':' + i;
+      if (res.isFinal) {
+        clearTimeout(interimT);
+        if (fastDone.has(key)) { fastDone.delete(key); continue; }
+        LAT.via = 'final'; deliver(alts);
+      } else if (i === e.results.length - 1) agendarRapido(alts, key);
+    }
+  };
+  r.onerror = e => {
+    if (e.error === 'language-not-supported') { S.noLocal = true; S.localOK = false; }
+    if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+      S.micOK = false; S.blocked = true; setState('blocked');
+    }
+  };
+  r.onend = () => {
+    S.ouvindoFala = 0;
+    if (rec !== r) return;
+    recRunning = false;
+    if (S.micOK && !S.blocked && !speaking) recRestartTimer = setTimeout(() => { recRestartTimer = null; startRec(); }, 30);
+  };
+  try { r.start(); }
+  catch (e) {
+    recRunning = false; if (rec === r) rec = null;
+    if (S.micOK && !S.blocked && !speaking) recRestartTimer = setTimeout(() => { recRestartTimer = null; startRec(); }, 150);
+  }
+}
+function stopRec() {
+  clearTimeout(interimT);
+  if (recRestartTimer) { clearTimeout(recRestartTimer); recRestartTimer = null; }
+  const r = rec; rec = null; recRunning = false;
+  if (r) { r.onend = r.onresult = r.onerror = r.onstart = null; try { r.abort(); } catch (e) {} }
+}
 /* ---------- emergência: palavra-chave cadastrada OU pedido de ajuda falado, em qualquer estado do app ----------
    Fluxo: som + vibração própria → frase curta → abre o discador do telefone direto (modo real e simulação, sem confirmação).
-   A chamada só se completa quando a pessoa toca em ligar. O GuIa não envia localização nem mensagens (ainda não implementado) e diz isso em voz alta. */
+   A chamada só se completa quando a pessoa toca em ligar. Em paralelo, avisa o responsável pelo Telegram (emgAlertaTelegram) e diz em voz alta se o aviso saiu. */
 const E = { phase: null, step: null, dialed: null, resumeNav: false, busy: false, tok: 0, src: '' }; S.emg = E;
 const RE_SOCORRO = /\b(preciso de ajuda|preciso de socorro|estou em perigo|to em perigo|tou em perigo|socorro|chamar ajuda|pedir ajuda|emergencia|estou sendo (seguid|ameacad|assaltad|persegui)\w*)\b/;
 const RE_FIM = /\b(estou seguro|estou segura|foi sem querer|sem querer|esta tudo bem|encerrar|encerra|cancelar|cancela|nao preciso|ja passou|pode parar)\b/;
@@ -648,15 +765,18 @@ let dialFn = n => { location.href = 'tel:' + n; }; /* abre o discador do aparelh
 const hcache = new Map();
 async function hashOf(c, salt) { const k = salt + c; if (!hcache.has(k)) hcache.set(k, await sha(c, salt)); return hcache.get(k); }
 async function emgMatch(alts) {
-  const pr = store.get('profile'); if (!pr || !pr.kw) return false;
+  const pr = store.get('profile'); if (!pr || !pr.kw) return null;
   const echo = (Date.now() - lastEnd < 900 || speaking) ? (S.lastSpoken || '').split(' ') : null;
   for (const a of alts) {
     const n = norm(a), w = n.split(' ').filter(Boolean), c = new Set([n]);
     w.forEach((x, i) => { if (x.length >= 3) c.add(x); if (i + 1 < w.length) c.add(x + ' ' + w[i + 1]); });
-    for (const x of c) { if (echo && x.split(' ').every(z => echo.indexOf(z) >= 0)) continue; if (await hashOf(x, pr.salt) === pr.kw) return true; }
+    for (const x of c) { if (echo && x.split(' ').every(z => echo.indexOf(z) >= 0)) continue; if (await hashOf(x, pr.salt) === pr.kw) return x; }
   }
-  return false;
+  return null;
 }
+/* A palavra-chave precisa ser reconhecida duas vezes em até 4 segundos. A primeira ocorrência apenas arma o alerta; a segunda ativa a emergência. */
+const EMG_REPEAT_MS = 4000;
+let emgKeywordFirst = { word: '', at: 0 };
 const emgSim = () => !!(S.sim || (S.nav && S.nav.sim));
 const emgSay = t => speak(t, { force: true });
 const echoWords = () => (Date.now() - lastEnd < 900 || speaking) ? (S.lastSpoken || '').split(' ') : null;
@@ -680,7 +800,7 @@ async function emgTrigger(src) {
   const n = S.nav; E.resumeNav = !!(n && n.phase !== 'done' && !n.paused);
   if (E.resumeNav) { n.paused = true; n.tok++; clearTimeout(n.timer); } /* a viagem espera enquanto durar o alerta */
   try { speechSynthesis.cancel(); } catch (e) {}
-  sound('emg2'); show('emg'); emgLink(true); /* som e vibração específicos + tela + botão Ligar */
+  sound('emg2'); E.envio = emgAlertaTelegram(); show('emg'); emgLink(true); /* som e vibração específicos + tela + botão Ligar */
   await sleep(600);
   if (my !== E.tok || !E.phase) return;
   return emgDial(EMG.tel, true);
@@ -692,7 +812,7 @@ async function emgDial(num, direto) {
   if (!E.phase) return;
   try { dialFn(num); } catch (e) {}
   E.step = 'after'; show('emg');
-  emgSay('O número é ' + (num === '190' ? 'um nove zero' : EMG.falar) + '. ' + (emgSim() && num !== '190' ? 'Isto é uma simulação, mas o número é real. ' : '') + 'A ligação só acontece quando você tocar em ligar. Eu não envio sua localização nem mensagens. ' + emgText());
+  emgSay('O número é ' + (num === '190' ? 'um nove zero' : EMG.falar) + '. ' + (emgSim() && num !== '190' ? 'Isto é uma simulação, mas o número é real. ' : '') + 'A ligação só acontece quando você tocar em ligar. ' + (num === '190' ? '' : await emgEnvioFala()) + emgText());
 }
 async function emgEnd(why) {
   if (!E.phase) return;
@@ -727,10 +847,21 @@ async function emgHear(alts) {
   try { await emgCmd(ns); } finally { E.busy = false; }
 }
 async function deliver(alts) {
+  LAT.mark('entrega');
   if (E.phase) return emgHear(alts);
-  if (await emgMatch(alts)) return emgTrigger('palavra-chave');
+  const matchedKeyword = await emgMatch(alts);
+  if (matchedKeyword) {
+    const now = Date.now();
+    if (emgKeywordFirst.word === matchedKeyword && now - emgKeywordFirst.at <= EMG_REPEAT_MS) {
+      emgKeywordFirst = { word: '', at: 0 };
+      return emgTrigger('palavra-chave repetida duas vezes');
+    }
+    emgKeywordFirst = { word: matchedKeyword, at: now };
+    return; /* uma ocorrência isolada não aciona o alerta */
+  }
+  if (Date.now() - emgKeywordFirst.at > EMG_REPEAT_MS) emgKeywordFirst = { word: '', at: 0 };
   if (alts.some(a => { const n = norm(a); return RE_SOCORRO.test(n) && !echoText(n); })) return emgTrigger('pedido de ajuda');
-  if (speaking || Date.now() - lastEnd < 700) return; /* ignora o eco da própria voz do Guia */
+  if (speaking || Date.now() - lastEnd < 300) return; /* ignora o eco da própria voz do Guia */
   const ls = S.lastSpoken || ''; alts = alts.filter(a => { const n = norm(a); return !(n.split(' ').length >= 4 && ls.indexOf(n) >= 0); }); if (!alts.length) return;
   if (!S.secret) setHeard(alts[0]); if (waiter) { const w = waiter; waiter = null; w(alts); } else if (mainHandler) mainHandler(alts); }
 function listenOnce(ms) { return new Promise(res => { const t = setTimeout(() => { waiter = null; res(null); }, ms); waiter = a => { clearTimeout(t); res(a); }; }); }
@@ -743,18 +874,26 @@ const RE_SIM_OFF = /\b(desativar|desligar|sair d[ae]|encerrar|cancelar|fim d[ae]
 const RE_SIM_ON = /\b(simulacao|simular|modo teste|modo de teste)\b/;
 
 /* ---------- previsão do ônibus: quando sai e quando passa na parada ---------- */
-const RE_PREV = /\b(previsao|previsoes|quando (o )?onibus (passa|sai|chega|vem|parte)|que horas (o )?onibus (passa|sai|chega|parte)|(o )?onibus (passa|sai|chega|vem) (quando|que horas)|quanto (tempo )?falta (para|pro) (o )?onibus|horario do onibus)\b/;
-const PREV_URL = () => ((window.GUIA_CONFIG && window.GUIA_CONFIG.previsaoUrl) || (prefs && prefs.previsaoUrl) || '').trim();
+const RE_PREV = /\b(previsao|previsoes|quando (o )?onibus (passa|sai|chega|vem|parte)|que horas (o )?onibus (passa|sai|chega|parte)|(o )?onibus (passa|sai|chega|vem) (quando|que horas)|quanto (tempo )?falta (para|pro) (o )?onibus|horario do onibus|em quantos minutos (chega|vem) (o )?onibus|estimativa do onibus|tempo de viagem|quanto falta para chegar|quanto falta ate (o )?destino)\b/;
+const PREV_URL = () => { const a = API(); return a ? a + '/previsao' : ((window.GUIA_CONFIG && window.GUIA_CONFIG.previsaoUrl) || (prefs && prefs.previsaoUrl) || '').trim(); };
 /** Busca a previsão no serviço configurado. Nunca inventa: sem fonte, sem internet ou com falha, devolve o motivo. */
+const PREV_CACHE = new Map();
 async function buscarPrevisao(stop) {
   const url = PREV_URL(); if (!url) return { erro: 'sem_fonte' };
   if (navigator.onLine === false) return { erro: 'offline' };
+  const key = url + '|875C-10|' + stop.id;
+  const cached = PREV_CACHE.get(key);
+  if (cached && Date.now() - cached.t < 30000) return cached.value;
+  const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 3500);
   try {
-    const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 7000);
-    const r = await fetch(url + (url.indexOf('?') < 0 ? '?' : '&') + 'linha=875C-10&parada=' + stop.id + '&lat=' + stop.lat + '&lng=' + stop.lng, { signal: ctl.signal });
-    clearTimeout(to); if (!r.ok) return { erro: 'falha' };
-    return { dados: await r.json() };
+    const sep = url.indexOf('?') < 0 ? '?' : '&';
+    const r = await fetch(url + sep + 'linha=875C-10&parada=' + stop.id + '&lat=' + stop.lat + '&lng=' + stop.lng, { signal: ctl.signal });
+    if (!r.ok) return { erro: 'falha' };
+    const value = { dados: await r.json() };
+    PREV_CACHE.set(key, { t: Date.now(), value });
+    return value;
   } catch (e) { return { erro: navigator.onLine === false ? 'offline' : 'falha' }; }
+  finally { clearTimeout(to); }
 }
 const minFala = (m, est) => m <= 0 ? 'agora' : m === 1 ? (est ? 'em cerca de 1 minuto' : 'em 1 minuto') : (est ? 'em cerca de ' : 'em ') + m + ' minutos';
 /** Previsão calculada pela posição dos ônibus (a SPTrans só cadastra paradas de corredor, então não há previsão pronta por parada). */
@@ -766,6 +905,7 @@ function previsaoEstimada(stop, d) {
   const f = x => x.minutos === 0 ? 'está chegando agora' : 'está a ' + pl(x.paradasAte, 'parada', 'paradas') + ', daqui a cerca de ' + x.minutos + (x.minutos === 1 ? ' minuto' : ' minutos');
   const p = ['O ônibus 875C-10 mais próximo de ' + nm(stop) + ' ' + f(ps[0]) + '.'];
   if (ps[1]) p.push('O seguinte ' + f(ps[1]) + '.');
+  if (d.intervalo) p.push('O intervalo da linha agora é de cerca de ' + pl(d.intervalo, 'minuto', 'minutos') + ' entre um ônibus e outro.');
   p.push('É uma estimativa pela posição dos ônibus.');
   return p.join(' ');
 }
@@ -784,12 +924,13 @@ async function previsaoTexto(stop) {
   }
   if (!p.length) return d.fonte === 'posicao' ? 'Não há ônibus da linha 875C-10 se aproximando de ' + nm(stop) + ' agora.' : 'Não há previsão de ônibus para ' + nm(stop) + ' agora.';
   if ((d.passagens || []).some(x => x && x.estimado) || (d.saida && d.saida.estimado)) p.push('É uma estimativa pela posição do ônibus.');
+  if (d.intervalo) p.push('O intervalo da linha agora é de cerca de ' + pl(d.intervalo, 'minuto', 'minutos') + ' entre um ônibus e outro.');
   if (d.atualizadoEm) p.push('Informação das ' + d.atualizadoEm + '.');
   return p.join(' ');
 }
 /** Já dentro do ônibus: a previsão útil é o tempo até o destino (estimativa pela média da linha). */
 function previsaoNoOnibus(n) {
-  const l = n.dest.id - STOPS[n.idx].id, mins = Math.max(1, Math.round(l * 1.83));
+  const l = n.dest.id - STOPS[n.idx].id, mins = Math.max(1, Math.round(l * minPorParada()));
   return 'Você já está no ônibus. Faltam ' + pl(l, 'parada', 'paradas') + ' até ' + nm(n.dest) + ', cerca de ' + mins + ' minutos. É uma estimativa pela média da linha.';
 }
 /** Pergunta de previsão fora de uma viagem: usa a parada mais próxima pelo GPS (ou a que foi falada na simulação). */
@@ -808,6 +949,7 @@ async function globalCmd(n) {
   if (await vibCmd(n)) return true;
   if (RE_EXPLICA.test(n)) { await speak(EXPLICA_APP); return true; }
   if (RE_PREV.test(n)) { await previsaoGlobal(); return true; }
+  if (RE_CONVITE.test(n)) { await convitePorVoz(); return true; }
   if (RE_SIM_OFF.test(n)) { if (S.sim || true) { S.sim = false; S.modeChosen = true; setSimBanner(); sound('ok'); await speak('Modo simulação desativado. Usando localização real.'); return true; } }
   if (RE_SIM_ON.test(n) && !/\b(nao|sem)\b/.test(n)) { S.sim = true; S.modeChosen = true; setSimBanner(); sound('ok'); await speak('Modo simulação ativado.'); return true; }
   return false;
@@ -895,32 +1037,282 @@ async function ensureExtras() {
   }
 }
 /* ---------- cadastro 100% por voz, com persistência ---------- */
-const EXPLICA_APP = 'O Guia é um guia por voz para a linha de ônibus 875C-10, do Terminal Lapa ao Metrô Santa Cruz. Você diz para onde quer ir, e eu acompanho a viagem pelo GPS: aviso cada parada do caminho e a hora de descer, com voz, sons e vibração. Tudo funciona falando, sem precisar tocar na tela. Para treinar sem sair de casa, existe o modo simulação, que também mostra o ônibus chegando ao ponto: é só dizer simulação. Em uma emergência, a sua palavra-chave abre na hora o discador para o seu contato de segurança. Durante a viagem, diga ajuda para ouvir os comandos. Para ouvir esta explicação de novo, diga como funciona.';
+const EXPLICA_APP = 'O Guia é um guia por voz para a linha de ônibus 875C-10, do Terminal Lapa ao Metrô Santa Cruz. Você diz para onde quer ir, e eu acompanho a viagem pelo GPS: aviso cada parada do caminho e a hora de descer, com voz, sons e vibração. Antes, eu te guio até o ponto, digo quando o ônibus vai passar e quanto tempo dura a viagem. Tudo funciona falando, sem precisar tocar na tela. Para treinar sem sair de casa, existe o modo simulação, que também mostra o ônibus chegando ao ponto: é só dizer simulação. Em uma emergência, repita sua palavra-chave duas vezes em até quatro segundos para abrir o discador do seu contato de segurança e avisar o seu responsável pelo Telegram. Durante a viagem, diga ajuda para ouvir os comandos. Para ouvir esta explicação de novo, diga como funciona.';
 const RE_EXPLICA = /\b(como funciona|o que e o guia|o que e esse aplicativo|explica\w* o aplicativo|sobre o aplicativo)\b/;
 async function sha(t, salt) { try { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + t)); return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join(''); } catch (e) { let h = 5381; (salt + t).split('').forEach(c => h = ((h << 5) + h + c.charCodeAt(0)) | 0); return 'x' + h; } }
 const parseName = (n, raw) => { const c = n.replace(/\b(meu nome e|me chamo|pode me chamar de|me chame de|eu sou o|eu sou a|eu sou|sou o|sou a|nome)\b/g, '').trim(); if (c.length < 2 || c.split(' ').length > 4) return undefined; return c.split(' ').map(w => w[0].toUpperCase() + w.slice(1)).join(' '); };
 const KW_BAD = /\b(sim|nao|pronto|cancelar|ajuda|parar|pare|avancar|continuar|repetir|sair|guia|ok|certo|confirmar|corrigir|simulacao|socorro|emergencia|perigo|policia)\b/;
 const kwParse = a => { if (!a[0] || a[0].length < 2) return undefined; if (a.some(x => KW_BAD.test(x))) return { retry: 'Essa palavra é usada em comandos. Escolha outra palavra, que você não costuma falar no dia a dia. Diga sua palavra agora.' }; return a; };
 async function register() {
-  const pend = store.get('reg') || {}; let name = pend.name;
-  if (!name) { show('say', { hint: '' }); await speak('Antes do cadastro, uma explicação rápida. ' + EXPLICA_APP); }
-  while (!name) {
-    const n = await ask('Vamos começar seu cadastro. Como você gostaria de ser chamado?', parseName, { again: 'Como você gostaria de ser chamado?' });
-    const ok = await ask('Entendi. Você disse ' + n + '. Posso cadastrar esse nome? Diga sim ou não.', yn);
-    if (ok) { name = n; store.set('reg', { name }); }
+  const pend = store.get('reg') || {}; let nomeCompleto = pend.nomeCompleto;
+  const bot = await botNome(), botFala = bot ? bot.replace(/^@/, 'arroba ') : '';
+  const doBot = bot ? ', o bot ' + botFala : '';
+  if (!nomeCompleto) {
+    show('say', { hint: '' });
+    await speak('Para começar, vou fazer o seu cadastro. Vou precisar do seu nome completo, de uma palavra-chave de segurança e do nome completo da pessoa responsável por você. Essa pessoa precisa já ter se cadastrado no nosso bot do Telegram' + doBot + '. Se quiser ouvir como o aplicativo funciona, diga como funciona.');
   }
+  /* Nome completo: o responsável vê no alerta do Telegram, para saber de quem se trata. A saudação usa só o primeiro nome. */
+  const parseNomeCompleto = (n, raw) => {
+    let v = String(raw || n || '').replace(/^\s*(o meu nome|meu nome)( completo)? (e|é)\s+/i, '').replace(/^\s*nome completo( e| é)?\s+/i, '').replace(/\s+/g, ' ').trim();
+    const ws = v.split(' ').filter(Boolean);
+    if (ws.length < 2 || v.length < 5 || v.length > 80 || /[0-9@]/.test(v)) return { retry: 'Preciso do nome e do sobrenome. Diga o seu nome completo.' };
+    const mi = new Set(['de', 'da', 'do', 'dos', 'das', 'e']);
+    return ws.map((w, i) => (i > 0 && mi.has(w.toLowerCase())) ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  };
+  while (!nomeCompleto) {
+    const n = await ask('Qual é o seu nome completo?', parseNomeCompleto, { again: 'Diga o seu nome completo, com sobrenome.' });
+    const ok = await ask('Seu nome é ' + n + '. Está certo? Diga sim ou não.', yn);
+    if (ok) { nomeCompleto = n; store.set('reg', { nomeCompleto }); }
+  }
+  const name = nomeCompleto.split(' ')[0];
   let agreed;
   for (;;) {
-    const w1 = await ask('Agora, escolha uma palavra-chave de segurança. Ela servirá para proteger seu perfil E também como palavra de emergência a qualquer momento, no modo real ou na simulação. Quando você disser essa palavra, o Guia abre na hora o discador do telefone com o seu contato de segurança, o número ' + EMG.falar + '. É só tocar em ligar. Diga sua palavra agora.', kwParse, { raw: true, again: 'Diga sua palavra-chave agora.', tip: 'Escolha uma palavra só, que você não costuma falar no dia a dia. Ao dizer a palavra, o discador abre direto para ' + EMG.exibir + '.', hint: '' });
+    const w1 = await ask('Agora, escolha uma palavra-chave de segurança. Ela servirá para proteger seu perfil E também como palavra de emergência a qualquer momento, no modo real ou na simulação. Quando você repetir essa palavra-chave duas vezes seguidas, em até quatro segundos, o Guia abre na hora o discador do telefone com o seu contato de segurança, o número ' + EMG.falar + '. É só tocar em ligar. Se você cadastrar um responsável, ele também recebe um alerta pelo Telegram. Diga sua palavra agora.', kwParse, { raw: true, again: 'Diga sua palavra-chave agora.', tip: 'Escolha uma palavra só, que você não costuma falar no dia a dia. Ao repetir a palavra-chave duas vezes em até quatro segundos, o discador abre direto para ' + EMG.exibir + '.', hint: '' });
     const w2 = await ask('Repita sua palavra-chave para confirmar.', a => a[0] && a[0].length >= 2 ? a : undefined, { raw: true });
     const hit = w1.find(x => w2.indexOf(x) >= 0);
     if (hit) { agreed = hit; break; }
     await speak('As palavras não coincidem. Vamos tentar de novo.');
   }
+  /* Responsável: nome completo, do mesmo jeito que ele se cadastrou antes no bot do Telegram. */
+  let telegramName = '';
+  for (;;) {
+    telegramName = await ask('Agora, diga o nome completo da pessoa responsável por você, do mesmo jeito que ela se cadastrou no bot do Telegram.', parseNomeResp, { again: 'Diga o nome completo da pessoa responsável.' });
+    const okContact = await ask('O nome é ' + telegramName + '? Diga sim ou não.', yn);
+    if (okContact) break;
+  }
+  let cadastrada = await ask('Essa pessoa já se cadastrou no nosso bot do Telegram' + doBot + '? Diga sim ou não.', yn), pularVinculo = false;
+  while (!cadastrada) {
+    const r = await ask('Então peça para ' + telegramName + ' abrir o Telegram, procurar o bot ' + (botFala || 'do GuIa') + ', enviar start e responder o nome completo e a data de nascimento. Quando ela terminar, diga pronto. Ou diga pular, para fazer isso depois.',
+      n => /\b(pular|depois)\b/.test(n) ? 'pular' : /\b(pronto|ja|terminou|terminei|feito|cadastrou|cadastrada|tudo certo)\b/.test(n) ? 'pronto' : undefined,
+      { again: 'Diga pronto quando ela terminar o cadastro no bot, ou diga pular.', wait: 60000 });
+    if (r === 'pular') { pularVinculo = true; break; }
+    cadastrada = true;
+  }
   const salt = Math.random().toString(36).slice(2);
-  store.set('profile', { name, salt, kw: await sha(agreed, salt) }); /* só o hash fica salvo; a palavra nunca é falada nem exibida */
+  store.set('profile', { name, fullName: nomeCompleto, salt, kw: await sha(agreed, salt), emergencyContactName: telegramName, createdAt: Date.now(), lastUsedAt: Date.now(), visits: 1 }); /* memória local; só o hash da palavra-chave fica salvo */
   store.del('reg'); sound('arrive');
-  await speak('Seu cadastro foi concluído com sucesso. Em emergência, diga sua palavra-chave ou diga preciso de ajuda, e o discador abre na hora. Atenção: isso só funciona enquanto o Guia estiver aberto e com o microfone liberado. Agora podemos começar.');
+  await speak('Seu cadastro foi concluído. Em emergência, repita sua palavra-chave duas vezes em até quatro segundos: o Guia abre o discador e avisa ' + telegramName + ' pelo Telegram. Isso só funciona enquanto o GuIa estiver aberto e com o microfone liberado.');
+  if (pularVinculo) await speak('Tudo bem. Quando ' + telegramName + ' terminar o cadastro no bot, diga convidar responsável.');
+  else await convidarResponsavel(telegramName);
+  await speak('Agora podemos começar. Se quiser ouvir como o aplicativo funciona, diga como funciona.');
+}
+
+/* ---------- responsável no Telegram: convite, vínculo e alerta (servidor intermediário: guia-api) ---------- */
+IC.share = '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.5l6.8-4M8.6 13.5l6.8 4"/>';
+const API = () => ((window.GUIA_CONFIG && window.GUIA_CONFIG.apiUrl) || (prefs && prefs.apiUrl) || '').trim().replace(/\/+$/, '');
+const RE_CONVITE = /\b(convidar|convite|adicionar|cadastrar|configurar|outro)\b.*\b(responsavel|contato)\b/;
+async function api(path, o) {
+  o = o || {}; const base = API();
+  if (!base) return { erro: 'sem_api' };
+  if (navigator.onLine === false) return { erro: 'offline' };
+  const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), o.timeout || 6000);
+  try {
+    const r = await fetch(base + path, { method: o.method || 'GET', headers: o.body ? { 'Content-Type': 'application/json' } : undefined, body: o.body ? JSON.stringify(o.body) : undefined, signal: ctl.signal });
+    if (!r.ok) return { erro: 'http', status: r.status };
+    return { dados: await r.json() };
+  } catch (e) { return { erro: 'rede' }; } finally { clearTimeout(to); }
+}
+/* nomes e datas ditos em voz alta */
+const NUM_PT = { um: 1, uma: 1, primeiro: 1, dois: 2, duas: 2, tres: 3, quatro: 4, cinco: 5, seis: 6, sete: 7, oito: 8, nove: 9, dez: 10, onze: 11, doze: 12, treze: 13, quatorze: 14, catorze: 14, quinze: 15, dezesseis: 16, dezessete: 17, dezoito: 18, dezenove: 19, vinte: 20, trinta: 30, quarenta: 40, cinquenta: 50, sessenta: 60, setenta: 70, oitenta: 80, noventa: 90, cem: 100, cento: 100, duzentos: 200, trezentos: 300, quatrocentos: 400, quinhentos: 500, seiscentos: 600, setecentos: 700, oitocentos: 800, novecentos: 900 };
+const MESES_PT = ['janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+function numeroFalado(txt) { /* "15", "quinze", "mil novecentos e noventa e dois" → número (ou null) */
+  const t = String(txt || '').trim(); if (/^\d+$/.test(t)) return Number(t);
+  let total = 0, atual = 0, achou = false;
+  for (const w of t.split(' ').filter(x => x && x !== 'e' && x !== 'de')) {
+    if (w === 'mil') { total += (atual || 1) * 1000; atual = 0; achou = true; }
+    else if (NUM_PT[w] != null) { atual += NUM_PT[w]; achou = true; }
+    else if (/^\d+$/.test(w)) { atual += Number(w); achou = true; }
+    else return null;
+  }
+  return achou ? total + atual : null;
+}
+function parseNascFalada(n) {
+  const erro = { retry: 'Não entendi a data. Diga o dia, o mês e o ano, por exemplo: quinze de março de mil novecentos e noventa.' };
+  let d, mo, y, m;
+  if ((m = n.match(/^(.*?)\s*\b(janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\b\s*(.*)$/))) { d = numeroFalado(m[1].replace(/\bde$/, '').trim()); mo = MESES_PT.indexOf(m[2]) + 1; y = numeroFalado(m[3].replace(/^de\s+/, '').trim()); }
+  else if ((m = n.match(/\b(\d{1,2})\D+(\d{1,2})\D+(\d{4})\b/)) || (m = n.match(/\b(\d{2})(\d{2})(\d{4})\b/))) { d = +m[1]; mo = +m[2]; y = +m[3]; }
+  if (!d || !mo || !y) return erro;
+  const dt = new Date(Date.UTC(y, mo - 1, d));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== mo - 1 || dt.getUTCDate() !== d || y < 1900 || y > new Date().getFullYear() - 10) return erro;
+  return String(d).padStart(2, '0') + '/' + String(mo).padStart(2, '0') + '/' + y;
+}
+const parseNomeResp = (n, raw) => {
+  const v = String(raw || n || '').replace(/^\s*((o|meu)\s+)*(nome(\s+completo)?(\s+(dela|dele))?|responsável|responsavel)(\s+(e|é))?\s+/i, '').replace(/\s+/g, ' ').trim();
+  const ws = v.split(' ').filter(Boolean);
+  if (ws.length < 2 || v.length < 5 || v.length > 80 || /[0-9@]/.test(v)) return { retry: 'Preciso do nome e do sobrenome. Diga o nome completo da pessoa.' };
+  const mi = new Set(['de', 'da', 'do', 'dos', 'das', 'e']);
+  return ws.map((w, i) => (i > 0 && mi.has(w.toLowerCase())) ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+};
+
+/** O responsável se cadastrou antes no bot (nome completo e data de nascimento). Aqui você só diz o nome completo dele:
+    o servidor procura no bot, manda a ele o pedido (Aceitar/Recusar) e o app espera a resposta. */
+async function convidarResponsavel(nomeResp) {
+  const pr = store.get('profile') || {}, nome = pr.fullName || pr.name || 'Usuário';
+  let v = store.get('vinc') || {};
+  let r = await api('/vinculo/novo', { method: 'POST', body: { nome, uid: v.uid } });
+  if (r.erro === 'http' && r.status === 404 && v.uid) { store.del('vinc'); v = {}; r = await api('/vinculo/novo', { method: 'POST', body: { nome } }); }
+  if (r.erro) {
+    await speak(r.erro === 'sem_api' ? 'A ligação com o Telegram ainda não está configurada neste aplicativo. Por enquanto, o alerta só abre o discador.' : 'Não consegui falar com o servidor agora. Quando quiser tentar de novo, diga convidar responsável.');
+    return false;
+  }
+  v = { uid: r.dados.uid, contatos: v.contatos || [] }; store.set('vinc', v);
+  const bot = r.dados.bot || '', botFala = bot.replace(/^@/, 'arroba ');
+  const escolha = (prompt) => ask(prompt, n => /\b(pular|depois|deixar|cancelar)\b/.test(n) ? 'pular' : /\b(outro|outra|trocar|mudar)\b/.test(n) ? 'outro' : /\b(tentar|novamente|de novo|pronto|ja)\b/.test(n) ? 'tentar' : undefined, { again: 'Diga tentar de novo, outro nome ou pular.', noGlobal: true });
+  let alvo = nomeResp || null, nasc = '';
+  for (;;) {
+    if (!alvo) {
+      alvo = await ask('Diga o nome completo do seu responsável, do mesmo jeito que ele se cadastrou no bot do Telegram. Ou diga pular.', (n, raw) => /^(pular|depois)$/.test(n) ? 'PULAR' : parseNomeResp(n, raw), { again: 'Diga o nome completo do responsável, ou diga pular.', noGlobal: true });
+      if (alvo === 'PULAR') { await speak('Tudo bem. Para vincular o responsável depois, diga convidar responsável.'); return false; }
+      nasc = '';
+    }
+    setCaption('Procurando ' + alvo + ' no bot.'); show('vincular', { quem: alvo, bot, msg: 'Procurando no bot…' });
+    let b = await api('/vinculo/buscar', { method: 'POST', body: { uid: v.uid, nome: alvo, nasc: nasc || undefined }, timeout: 9000 });
+    if (b.dados && b.dados.precisaNascimento) {
+      nasc = await ask('Encontrei mais de uma pessoa com o nome ' + alvo + ' no bot. Diga a data de nascimento dela: dia, mês e ano.', (n) => /^(pular|depois)$/.test(n) ? 'PULAR' : parseNascFalada(n), { again: 'Diga a data de nascimento: dia, mês e ano.', noGlobal: true });
+      if (nasc === 'PULAR') { await speak('Tudo bem. Para vincular o responsável depois, diga convidar responsável.'); return false; }
+      b = await api('/vinculo/buscar', { method: 'POST', body: { uid: v.uid, nome: alvo, nasc }, timeout: 9000 });
+    }
+    const d = b.dados;
+    if (b.erro) {
+      const e = await escolha(b.erro === 'http' && b.status === 429 ? 'Foram muitas tentativas seguidas. Espere um pouco e diga tentar de novo, ou diga pular.' : b.erro === 'http' && b.status === 409 ? 'Você já tem o máximo de responsáveis cadastrados. Diga pular.' : 'Não consegui consultar o servidor agora. Diga tentar de novo, ou diga pular.');
+      if (e === 'pular') return false; if (e === 'outro') { alvo = null; } continue;
+    }
+    if (d.jaVinculado) { await speak(alvo + ' já é seu responsável.'); return true; }
+    if (!d.pedidoEnviado) {
+      const motivo = d.nascimentoNaoConfere ? 'A data de nascimento não confere com nenhum cadastro de ' + alvo + '.' : d.ambiguo ? 'Ainda há mais de uma pessoa com esse nome e essa data.' : 'Não encontrei ' + alvo + ' no bot.';
+      const e = await escolha(motivo + ' Peça para a pessoa abrir o Telegram, procurar o bot ' + botFala + ', enviar start e responder o nome completo e a data de nascimento. Depois diga tentar de novo. Ou diga outro nome, ou pular.');
+      if (e === 'pular') { await speak('Tudo bem. Para vincular o responsável depois, diga convidar responsável.'); return false; }
+      if (e === 'outro') { alvo = null; nasc = ''; } continue;
+    }
+    /* pedido enviado: espera a pessoa aceitar ou recusar no Telegram */
+    const antes = (v.contatos || []).length, recusasAntes = (await api('/vinculo/status?uid=' + v.uid, { timeout: 4000 })).dados?.recusas || 0;
+    const instr = 'Achei ' + alvo + ' no bot e mandei o pedido. Peça para a pessoa abrir o Telegram e tocar em Aceitar. Estou aguardando. Para ouvir de novo, diga repetir. Para deixar para depois, diga pular.';
+    setCaption('Aguardando ' + alvo + ' aceitar no Telegram.'); show('vincular', { quem: alvo, bot, msg: 'Aguardando aceitar no Telegram' });
+    const anterior = mainHandler; let fim, busy = false;
+    const fimP = new Promise(res => fim = res);
+    mainHandler = async alts => { if (busy) return; busy = true; try {
+      for (const a of alts) { const m = norm(a);
+        if (/\b(pular|depois|mais tarde|cancelar|sair)\b/.test(m)) { fim('pular'); return; }
+        if (/\b(repetir|repete|ajuda)\b/.test(m)) { await speak(instr); return; } }
+    } finally { busy = false; } };
+    const poll = setInterval(async () => {
+      const st = await api('/vinculo/status?uid=' + v.uid, { timeout: 4000 });
+      if (!st.dados) return;
+      if ((st.dados.contatos || []).length > antes) { v.contatos = st.dados.contatos.map(c => c.nome); store.set('vinc', v); fim('aceito'); }
+      else if ((st.dados.recusas || 0) > recusasAntes) fim('recusou');
+    }, 3500);
+    speak(instr);
+    const res = await Promise.race([fimP, sleep(10 * 60e3).then(() => 'tempo')]);
+    clearInterval(poll); mainHandler = anterior;
+    try { speechSynthesis.cancel(); } catch (e) {}
+    if (res === 'aceito') { sound('arrive'); await speak(alvo + ' aceitou ser o seu responsável. A partir de agora, a pessoa recebe o alerta no Telegram.'); return true; }
+    if (res === 'recusou') { const e = await escolha(alvo + ' recusou o pedido. Diga outro nome, ou pular.'); if (e === 'pular') return false; alvo = null; nasc = ''; continue; }
+    await speak(res === 'pular' ? 'Tudo bem. O pedido continua valendo por uma hora. Para vincular de novo, diga convidar responsável.' : alvo + ' ainda não respondeu. O pedido vale por uma hora. Para tentar de novo depois, diga convidar responsável.');
+    return false;
+  }
+}
+async function convitePorVoz() {
+  if (S.nav || S.walk || S.bus || E.phase) { await speak('Para configurar o responsável, termine a viagem antes.'); return; }
+  const pr = store.get('profile');
+  if (!pr) { await speak('Primeiro vamos terminar o seu cadastro.'); return; }
+  await convidarResponsavel();
+  await speak('Voltando. Para onde você gostaria de ir?');
+}
+/** Ao abrir o app: confere quantos responsáveis ainda recebem os alertas (o responsável pode sair com /parar). */
+async function vincSync() {
+  const v = store.get('vinc'); if (!v || !v.uid || !API()) return '';
+  const r = await api('/vinculo/status?uid=' + v.uid, { timeout: 3000 });
+  if (r.erro === 'http' && r.status === 404) { store.del('vinc'); return ''; }
+  if (!r.dados) return '';
+  const antes = (v.contatos || []).length, nomes = (r.dados.contatos || []).map(c => c.nome);
+  store.set('vinc', { uid: v.uid, contatos: nomes });
+  return antes > 0 && nomes.length === 0 ? ' Atenção: seu responsável não recebe mais os alertas. Para convidar alguém, diga convidar responsável.' : '';
+}
+/** Pré-aquece: abre a conexão com o servidor e já busca a previsão da parada mais próxima, antes de a pessoa perguntar. */
+async function warmUp() {
+  try {
+    if (API()) api('/', { timeout: 4000 });
+    if (S.geoOK && PREV_URL()) { const p = await getPos(6000), nr = nearest(p, 0, STOPS.length - 1); if (nr.d < 2500) buscarPrevisao(nr.s); }
+  } catch (e) {}
+}
+/* ---------- paradas oficiais: o app lê a lista completa da linha no servidor (SPTrans) ---------- */
+const ABREV_PT = { av: 'Avenida', al: 'Alameda', pca: 'Praça', 'pça': 'Praça', pc: 'Praça', dr: 'Doutor', dra: 'Doutora', prof: 'Professor', profa: 'Professora', brig: 'Brigadeiro', pres: 'Presidente', sta: 'Santa', sto: 'Santo', term: 'Terminal', r: 'Rua', cel: 'Coronel', gen: 'General', mal: 'Marechal', jd: 'Jardim', pq: 'Parque', nsa: 'Nossa', sra: 'Senhora', vd: 'Viaduto', viad: 'Viaduto', est: 'Estrada', tv: 'Travessa', lgo: 'Largo' };
+const PARTICULA_PT = new Set(['de', 'da', 'do', 'dos', 'das', 'e']);
+const ROMANO = /^(i{1,3}|iv|v|vi{1,3}|ix|x|xi{1,3}|xiv|xv|xvi{1,3}|xix|xx)$/i;
+/** "R DR JOSE ELIAS, 227" → "Rua Doutor José Elias, 227" (abreviações abertas, para a voz ler direito). */
+function bonito(txt) {
+  return String(txt || '').replace(/\s+/g, ' ').trim().split(' ').filter(w => w && !/^b\/c$/i.test(w)).map((w, i) => {
+    const bare = w.replace(/[.,]+$/, ''), tail = (w.match(/,+$/) || [''])[0], k = bare.toLowerCase();
+    if (ABREV_PT[k]) return ABREV_PT[k] + tail;
+    if (/^\d/.test(bare)) return bare + tail;
+    if (i > 0 && PARTICULA_PT.has(k)) return k + tail;
+    if (ROMANO.test(bare)) return bare.toUpperCase() + tail;
+    return bare.charAt(0).toUpperCase() + bare.slice(1).toLowerCase() + tail;
+  }).join(' ');
+}
+function montarParadas(lista, antigas) {
+  const tira = x => x.replace(/^(rua|avenida|praça|alameda|travessa|largo|viaduto|estrada)\s+/i, '');
+  const semTitulo = x => x.replace(/^(doutor|doutora|professor|professora|presidente|brigadeiro|coronel|general|marechal)\s+/i, '');
+  const uniq = a => [...new Set(a.filter(Boolean))];
+  return lista.map((p, i) => {
+    const primeiro = i === 0, ultimo = i === lista.length - 1;
+    const end = bonito(p.endereco || p.nome || ('Parada ' + (i + 1))), m = end.match(/^(.*?)[,\s]+(\d{1,5})$/);
+    const rua = m ? m[1] : end, numero = m ? m[2] : '', np = bonito(p.nome || '');
+    const marco = !!np && /terminal|metr[oô]|esta[cç][aã]o|pra[cç]a|hospital|universidade|faculdade|shopping|parque/i.test(np);
+    const core = tira(rua);
+    const nome = marco ? np : end, nome_curto = marco ? np : (numero ? core + ', ' + numero : core);
+    const ruas = uniq([norm(rua), norm(core), norm(semTitulo(core))]);
+    const pontos = marco ? uniq([norm(np), norm(semTitulo(tira(np)))]) : [];
+    const metros = /metr[oô]/i.test(np) ? uniq([norm(np), norm(np).replace(/^metro\s+/, '')]) : [];
+    const apelidos = primeiro ? ['ponto inicial', 'inicio da linha', 'primeira parada'] : ultimo ? ['ponto final', 'fim da linha', 'ultima parada'] : [];
+    const o = { id: i + 1, codigo: p.codigo, nome, nome_curto, distrito: '', lat: p.lat, lng: p.lng, tipo: primeiro ? 'Terminal de Origem' : ultimo ? 'Terminal de Destino' : 'Parada Convencional',
+      apelidos, ruas, numeros: numero ? [numero] : [], bairros: [], metros, faculdades: [], hospitais: [], pontos_turisticos: pontos };
+    /* aproveita bairros e apelidos já conhecidos da lista antiga quando é a mesma parada (mesma rua e mesmo número) */
+    const a = (antigas || []).find(x => (primeiro && marco && x.id === 1) || (ultimo && marco && x.id === antigas.length) || (numero && (x.numeros || []).includes(numero) && (x.ruas || []).some(r => ruas.includes(norm(r)))));
+    if (a) { o.distrito = a.distrito || ''; o.bairros = uniq([...(a.bairros || [])]); for (const c of ['apelidos', 'metros', 'faculdades', 'hospitais', 'pontos_turisticos']) o[c] = uniq([...o[c], ...(a[c] || [])]); }
+    o.palavras_chave = uniq([...o.ruas, ...o.numeros, ...o.pontos_turisticos, ...o.apelidos, ...o.metros, ...o.bairros]);
+    return o;
+  });
+}
+function aplicarParadas(lista, origem) {
+  const novas = montarParadas(lista, PARADAS_EMBUTIDAS);
+  STOPS.splice(0, STOPS.length, ...novas); /* troca o conteúdo da mesma lista: o reconhecimento e o resto do app passam a usá-la */
+  PREV_CACHE.clear(); S.paradasOficiais = true; S.paradasOrigem = origem;
+  const sig = novas.length + '|' + novas[0].codigo + '|' + novas[novas.length - 1].codigo;
+  if (store.get('paradasSig') !== sig) { clearTrip(); store.set('paradasSig', sig); } /* viagem salva com a lista antiga não vale mais */
+}
+const listaOk = l => Array.isArray(l) && l.length >= 2 && l.every(x => x && Number.isFinite(x.lat) && Number.isFinite(x.lng));
+async function carregarParadas() {
+  const c = store.get('paradas'), fresco = c && listaOk(c.lista) && Date.now() - c.t < 24 * 3600e3;
+  if (c && listaOk(c.lista)) aplicarParadas(c.lista, 'cache');
+  if (!API()) return;
+  const busca = async () => { const r = await api('/paradas', { timeout: 4500 }); if (r.dados && listaOk(r.dados.paradas)) { if (r.dados.alertas && r.dados.alertas.length) console.warn('Lista de paradas com alertas:', r.dados.alertas); store.set('paradas', { t: Date.now(), lista: r.dados.paradas }); return r.dados.paradas; } return null; };
+  if (fresco) { busca(); return; } /* lista recente: usa já e atualiza em segundo plano para a próxima vez */
+  const nova = await busca();
+  if (nova && !(c && JSON.stringify(c.lista) === JSON.stringify(nova))) aplicarParadas(nova, 'rede');
+}
+/** Nome do bot do Telegram, informado pelo servidor (ex.: @GuIaAlertasBot). */
+async function botNome() { const r = await api('/', { timeout: 4000 }); return (r.dados && r.dados.bot) || ''; }
+const tgTexto = () => E.tg === 'ok' ? 'Alerta enviado pelo Telegram ao seu responsável.' : E.tg === 'enviando' ? 'Enviando alerta pelo Telegram…' : E.tg === 'falha' ? 'Não consegui enviar o alerta pelo Telegram.' : 'Nenhum responsável cadastrado no Telegram.';
+async function emgEnvioFala() {
+  try { await E.envio; } catch (e) {}
+  return E.tg === 'ok' ? (emgSim() ? 'Enviei uma mensagem de teste ao seu responsável pelo Telegram. ' : 'Também enviei um alerta ao seu responsável pelo Telegram. ') : E.tg === 'falha' ? 'Não consegui enviar o alerta pelo Telegram. ' : '';
+}
+/** Manda o alerta pelo bot. Roda ao mesmo tempo em que o discador abre; nunca atrasa nem bloqueia a ligação. */
+async function emgAlertaTelegram() {
+  E.tg = 'enviando';
+  const v = store.get('vinc');
+  if (!v || !v.uid || !(v.contatos || []).length || !API()) { E.tg = 'sem'; return; }
+  try {
+    const n = S.nav, sim = emgSim();
+    let pos = null;
+    if (!sim && S.geoOK) { try { pos = await getPos(4000); } catch (e) { pos = S.lastPos0 || null; } }
+    const body = { uid: v.uid, simulacao: sim, parada: n && STOPS[n.idx] ? nm(STOPS[n.idx]) : (S.lastSimStop ? nm(S.lastSimStop) : ''), destino: n && n.dest ? nm(n.dest) : '' };
+    if (pos) { body.lat = pos.lat; body.lng = pos.lng; body.precisao = pos.accuracy; }
+    const r = await api('/alerta', { method: 'POST', body, timeout: 8000 });
+    E.tg = (r.dados && r.dados.enviados > 0) || (r.erro === 'http' && r.status === 429) ? 'ok' : 'falha'; /* 429 = já enviado no último minuto */
+  } catch (e) { E.tg = 'falha'; }
+  if (E.phase) show('emg');
 }
 
 /* ---------- paradas: reconhecimento inteligente (módulo do arquivo mestre linha875c10.js) ---------- */
@@ -983,7 +1375,7 @@ async function planTrip(first) {
     }
     if (S.sim) S.lastSimStop = origin;
     if (dest.id <= origin.id) { await speak('Essa parada fica para trás. A linha 875C-10 só vai do Terminal Lapa ao Metrô Santa Cruz. Vamos escolher o destino de novo.'); continue; }
-    const mins = Math.max(1, Math.round((dest.id - origin.id) * 1.83));
+    const mins = Math.max(1, Math.round((dest.id - origin.id) * minPorParada()));
     S.vdata = { dest: nm(dest), from: nm(origin), mins };
     const ok = await ask('Entendi. Você quer ir para ' + nm(dest) + ', pela linha 875C-10. ' + (walk ? 'O ponto mais próximo é ' + nm(origin) + ', a ' + fmtD(origin.dist) + ' de você. Vou te guiar até lá antes de começar. ' : 'Saindo de ' + nm(origin) + (!S.sim && origin.dist != null ? ', a ' + fmtD(origin.dist) + ' de você' : '') + '. ') + 'Cerca de ' + mins + ' minutos de ônibus, é uma estimativa. Está correto? Diga sim ou não.', n => /\b(corrigir|corrige|errado|nao|voltar)\b/.test(n) ? false : /\b(confirmar|confirmo|confirma|sim|certo|isso|ok|pode)\b/.test(n) ? true : undefined, { view: 'confirm', again: 'Está correto? Diga sim ou não.' });
     if (!ok) { prompt = 'Certo. Para onde você quer ir?'; continue; }
@@ -1021,7 +1413,7 @@ async function walkToStop(stop) {
     w.d = d; if (w.d0 == null) w.d0 = d; w.dir = walkDir(w, pos);
     if (S.view === 'walk') show('walk');
     if (d <= Math.max(25, (c.accuracy || 0))) { w.phase = 'done'; sound('arrive'); notify('GuIa', 'Você chegou ao ponto: ' + nm(stop));
-      await say('Você chegou ao ponto ' + nm(stop) + '. Prepare-se para embarcar.'); w.done('arrived'); return; }
+      await say('Você chegou ao ponto ' + nm(stop) + '. Fique na calçada, longe da guia, e aguarde o ônibus. Prepare-se para embarcar.'); w.done('arrived'); return; }
     const b = Math.floor(d / 20);
     if (w.bucket == null) w.bucket = b;
     if (w.best == null || d < w.best) w.best = d;
@@ -1105,14 +1497,95 @@ async function posicaoFalada(n, m) {
 /* ---------- espera pelo ônibus (SIMULAÇÃO): aviso de chegada por voz, som e vibração ----------
    Tudo aqui é simulado e dito como simulado: não existe ligação com dados reais de chegada do ônibus nesta etapa. */
 const RE_QUANTO = /\b(quanto (tempo )?falta|quanto falta|quando chega|ja chegou)\b/;
-const HELP_BUS = 'Você pode dizer: quanto falta, para ouvir a previsão simulada. Repetir. Avançar, para pular a espera na simulação. Parar, para pausar. Continuar. Ou sair, para encerrar. Em emergência, diga sua palavra-chave ou preciso de ajuda.';
+const HELP_BUS = 'Você pode dizer: quanto falta, para ouvir a previsão simulada. Repetir. Avançar, para pular a espera na simulação. Parar, para pausar. Continuar. Ou sair, para encerrar. Em emergência, repita sua palavra-chave duas vezes em até quatro segundos, ou diga preciso de ajuda.';
 function busStatus(b) {
   if (b.ph === 'here') return 'O ônibus simulado já chegou. Confirme a linha com o motorista e cuidado com o degrau ao subir.';
   return 'Previsão simulada: o ônibus chega em cerca de ' + pl(Math.max(1, Math.ceil(b.left)), 'minuto', 'minutos') + '. Lembrando que é uma simulação, não são dados reais do ônibus.';
 }
-const busMsgFar = stop => 'Seu ônibus, linha ' + BUS.linha + ', sentido ' + BUS.sentido + ', está chegando ao ponto ' + nm(stop) + '. Previsão simulada de chegada: ' + pl(BUS.minutos, 'minuto', 'minutos') + '. Esta previsão é simulada, não são dados reais do ônibus. Preste atenção ao ponto de embarque. Ao subir, cuidado com o degrau e segure no corrimão.';
-const busMsgNear = () => 'Seu ônibus está quase chegando. Previsão simulada: cerca de 1 minuto. Prepare-se para embarcar e tenha cuidado ao subir o degrau.';
-const busMsgHere = () => 'Seu ônibus chegou. Confirme se é a linha correta antes de embarcar: se tiver dúvida, pergunte ao motorista se é a ' + BUS.linha + '. Cuidado com o degrau ao subir e segure no corrimão. Lembrete: isto é uma simulação, o ônibus não é real.';
+const busMsgFar = stop => 'Seu ônibus, linha ' + BUS.linha + ', sentido ' + BUS.sentido + ', está chegando ao ponto ' + nm(stop) + '. Previsão simulada de chegada: ' + pl(BUS.minutos, 'minuto', 'minutos') + '. O intervalo simulado entre os ônibus desta linha é de ' + BUS.intervalo + ' minutos. Esta previsão é simulada, não são dados reais do ônibus. Preste atenção ao ponto de embarque. Ao subir, cuidado com o degrau e segure no corrimão.';
+/* Instruções de embarque e de viagem: as mesmas na simulação e no modo real. */
+const INSTR_EMBARQUE = 'Confirme com o motorista se é a linha ' + BUS.linha + ', sentido ' + BUS.sentido + '. Espere o ônibus parar completamente e as pessoas descerem. Ao subir, cuidado com o degrau e segure no corrimão. Passe o bilhete no validador.';
+const INSTR_DENTRO = 'Procure um assento, de preferência perto da porta, ou segure firme no corrimão. Eu aviso cada parada e quando faltar pouco para descer, e então você aperta o botão de parada. Para saber quanto falta, diga quanto falta.';
+const duracaoMin = l => Math.max(1, Math.round(l * minPorParada()));
+const tempoViagem = l => pl(l, 'parada', 'paradas') + ', cerca de ' + pl(duracaoMin(l), 'minuto', 'minutos');
+const busMsgNear = () => 'Seu ônibus está quase chegando. Previsão simulada: cerca de 1 minuto. Prepare-se para embarcar, fique na calçada longe da guia e tenha cuidado ao subir o degrau.';
+const busMsgHere = () => 'Seu ônibus chegou. ' + INSTR_EMBARQUE + ' Lembrete: isto é uma simulação, o ônibus não é real.';
+/* ---------- simulação: guia até o ponto (a posição é simulada; a pessoa não precisa andar) ---------- */
+const CAMINHADA = { metros: 120, passoM: 20, segPasso: 3 };
+const ROTEIRO_CAMINHADA = ['Siga em frente.', 'Siga em frente.', 'Vire à direita.', 'Siga em frente.', 'Atenção ao cruzamento: pare, escute o trânsito e só atravesse quando for seguro.', 'Siga em frente.'];
+const HELP_CAMINHADA = 'Você pode dizer: quanto falta, para ouvir a previsão do ônibus. Repetir. Avançar, para chegar logo ao ponto na simulação. Parar, para pausar. Continuar. Ou sair, para encerrar.';
+async function walkSim(stop) {
+  const w = S.walk = { stop, sim: true, d: CAMINHADA.metros, d0: CAMINHADA.metros, dir: 'Siga em frente.', phase: 'run', paused: false, busy: false, last: '', done: null, n: 0 };
+  const finished = new Promise(r => w.done = r); let over = false, hbusy = false, t = null;
+  const say = txt => { w.last = txt; return speak(txt); };
+  const finish = r => { if (over) return; over = true; clearInterval(t); w.phase = 'done'; w.done(r); };
+  const chegar = async () => {
+    w.d = 0; w.busy = true; w.phase = 'arrived'; if (S.view === 'walk') show('walk'); sound('arrive');
+    await say('Você chegou ao ponto ' + nm(stop) + '. Fique na calçada, longe da guia, e aguarde o ônibus. Lembrete: isto é uma simulação.'); w.busy = false; finish('arrived');
+  };
+  mainHandler = async alts => { if (hbusy) return; hbusy = true; try {
+    for (const a of alts) { const m = norm(a);
+      if (RE_SIM_OFF.test(m)) { S.sim = false; S.modeChosen = true; setSimBanner(); await speak('Modo simulação desativado. Usando localização real.'); finish('cancel'); return; }
+      if (/\b(sair|encerrar|cancelar|desistir|terminar)\b/.test(m)) { await speak('Caminhada cancelada.'); finish('cancel'); return; }
+      if (await vibCmd(m)) return;
+      if (RE_QUANTO.test(m) || RE_PREV.test(m)) { await say('Faltam cerca de ' + pl(Math.max(10, Math.round(w.d / 10) * 10), 'metro', 'metros') + ' até o ponto. Previsão simulada: o ônibus passa no ponto em cerca de ' + pl(BUS.minutos, 'minuto', 'minutos') + ', e o intervalo entre os ônibus é de ' + BUS.intervalo + ' minutos. É uma simulação.'); return; }
+      if (/\bajuda\b/.test(m)) { await say(HELP_CAMINHADA); return; }
+      if (/\b(repetir|repete|ouvir de novo)\b/.test(m)) { await say(w.last || 'Ainda estou calculando.'); return; }
+      if (/\b(avancar|avanca|pular)\b/.test(m)) { await chegar(); return; }
+      if (/\b(parar|pare|pausar|pausa|espera|aguarde)\b/.test(m)) { w.paused = true; await say('Caminhada pausada. Diga continuar para seguir.'); return; }
+      if (/\b(continuar|continua|retomar|seguir)\b/.test(m)) { if (w.paused) { w.paused = false; await say('Retomando.'); } else await say('A caminhada já está em andamento.'); return; }
+    } sound('err'); } finally { hbusy = false; } };
+  const tick = async () => {
+    if (over || w.paused || w.busy || speaking || E.phase) return;
+    w.d = Math.max(0, w.d - CAMINHADA.passoM); w.dir = ROTEIRO_CAMINHADA[w.n++ % ROTEIRO_CAMINHADA.length];
+    if (S.view === 'walk') show('walk');
+    if (w.d <= 0) { await chegar(); return; }
+    w.busy = true; sound('pass');
+    await say(w.d <= CAMINHADA.passoM ? 'O ponto está logo à frente, a cerca de ' + w.d + ' metros.' : 'Faltam cerca de ' + w.d + ' metros. ' + w.dir);
+    w.busy = false;
+  };
+  show('walk');
+  await say('Vou te guiar até o ponto ' + nm(stop) + ', a ' + fmtD(w.d0) + ' de você. Atenção: é uma simulação, você não precisa andar de verdade. As indicações são em linha reta, então preste atenção ao entorno e use sua bengala ou cão-guia. Só atravesse ruas quando for seguro.');
+  if (!over) t = setInterval(tick, CAMINHADA.segPasso * 1000);
+  const r = await finished; mainHandler = null; S.walk = null; return r;
+}
+
+/* ---------- modo real: espera no ponto com a previsão do ônibus (posição real dos ônibus, pelo servidor) ---------- */
+const ESPERA = { pollMs: 30000 };
+const HELP_ESPERA = 'Você pode dizer: quanto falta, para ouvir a previsão do ônibus. Repetir. Embarquei, quando estiver dentro do ônibus. Ou sair, para encerrar. Em emergência, repita sua palavra-chave duas vezes em até quatro segundos, ou diga preciso de ajuda.';
+/** Devolve 'ok' (pessoa disse que embarcou) ou 'cancel'. */
+async function busArrivalReal(trip) {
+  const stop = trip.origin;
+  const b = S.bus = { stop, real: true, ph: 'far', min: null, last: '', busy: false, done: null };
+  const finished = new Promise(r => b.done = r); let over = false, hbusy = false, poll = null; const avisou = new Set();
+  const finish = r => { if (over) return; over = true; clearInterval(poll); b.done(r); };
+  const say = txt => { b.last = txt; return speak(txt); };
+  mainHandler = async alts => { if (hbusy) return; hbusy = true; try {
+    for (const a of alts) { const m = norm(a);
+      if (/\b(sair|encerrar|cancelar|desistir|terminar)\b/.test(m)) { await speak('Viagem cancelada.'); finish('cancel'); return; }
+      if (/\b(embarquei|embarcado|subi|entrei|pronto|ja subi)\b/.test(m)) { finish('ok'); return; }
+      if (await vibCmd(m)) return;
+      if (RE_QUANTO.test(m) || RE_PREV.test(m)) { await say(await previsaoTexto(stop)); return; }
+      if (/\bajuda\b/.test(m)) { await say(HELP_ESPERA); return; }
+      if (/\b(repetir|repete|ouvir de novo)\b/.test(m)) { await say(b.last || await previsaoTexto(stop)); return; }
+    } sound('err'); } finally { hbusy = false; } };
+  show('espera');
+  b.busy = true;
+  await say('Você está no ponto ' + nm(stop) + '. Fique na calçada, longe da guia, e aguarde com atenção. Quando ouvir o ônibus se aproximar, estenda o braço para o motorista parar. ' + await previsaoTexto(stop) + ' Eu aviso quando ele estiver chegando. Para ouvir de novo, diga quanto falta. Quando estiver dentro do ônibus, diga embarquei.');
+  b.busy = false;
+  poll = setInterval(async () => {
+    if (over || b.busy || speaking || E.phase) return;
+    const r = await buscarPrevisao(stop), p = ((r.dados || {}).passagens || [])[0];
+    if (over || !p || p.minutos == null) return;
+    b.min = p.minutos; if (S.view === 'espera') show('espera');
+    if (p.minutos === 0 && !avisou.has('chegou')) { avisou.add('chegou'); b.busy = true; b.ph = 'here'; show('espera'); sound('busHere'); await say('Seu ônibus está chegando agora. ' + INSTR_EMBARQUE + ' Quando estiver dentro do ônibus, diga embarquei.'); b.busy = false; }
+    else if (p.minutos <= 3 && !avisou.has('perto') && !avisou.has('chegou')) { avisou.add('perto'); b.busy = true; b.ph = 'near'; show('espera'); sound('busNear'); await say('Seu ônibus está chegando, em cerca de ' + pl(Math.max(1, p.minutos), 'minuto', 'minutos') + '. Fique atento e prepare-se para embarcar.'); b.busy = false; }
+  }, ESPERA.pollMs);
+  const rr = await finished;
+  mainHandler = null; S.bus = null;
+  return rr;
+}
+
 /** Devolve 'ok' (pessoa disse que embarcou) ou 'cancel'. */
 async function busArrivalSim(trip) {
   const stop = trip.origin;
@@ -1166,13 +1639,13 @@ const APROX_M = 250, SAIU_M = 60; /* GPS: aproximação a até 250 m da próxima
 const EVENTOS_LOG = []; let tripSeq = 0;
 function drawTrip() { if (S.nav) setTrip(); }
 const rotuloParada = s => 'parada ' + s.id + ', ' + nm(s);
-const msgAproximacao = (n, nx) => 'Estamos nos aproximando da próxima parada: ' + rotuloParada(nx) + '.' + (nx.id === n.dest.id ? ' É o seu destino.' : '');
+const msgAproximacao = (n, nx) => 'Estamos nos aproximando da próxima parada: ' + rotuloParada(nx) + '.' + (nx.id === n.dest.id ? ' É o seu destino. Aperte o botão de parada.' : '');
 function msgChegada(n, s) {
   const l = n.dest.id - s.id, nx = STOPS[s.id];
-  return 'Chegamos à ' + rotuloParada(s) + '.' + (l > 1 ? ' Faltam ' + pl(l, 'parada', 'paradas') + ' até ' + nm(n.dest) + '. Próxima: ' + nm(nx) + ', a ' + fmtD(dist(s, nx)) + '.' : '');
+  return 'Chegamos à ' + rotuloParada(s) + '.' + (l > 1 ? ' Faltam ' + tempoViagem(l) + ' até ' + nm(n.dest) + '. Próxima: ' + nm(nx) + ', a ' + fmtD(dist(s, nx)) + '.' : '');
 }
-const msgPreparacao = n => 'Prepare-se para desembarcar na próxima parada, ' + nm(n.dest) + '. Aguarde o ônibus parar completamente.';
-const msgDestino = n => 'Você chegou ao seu destino, ' + nm(n.dest) + '. Confirme sua localização antes de prosseguir.' + (n.dest.id === 46 ? ' Fim da linha.' : '') + (n.sim ? ' Fim da simulação. Voltando ao modo real.' : ' Ao descer, cuidado com o degrau.');
+const msgPreparacao = n => 'Prepare-se para desembarcar na próxima parada, ' + nm(n.dest) + ', daqui a cerca de ' + pl(duracaoMin(1), 'minuto', 'minutos') + '. Vá até a porta, segure no corrimão e aperte o botão de parada. Aguarde o ônibus parar completamente e cuidado com o degrau ao descer.';
+const msgDestino = n => 'Você chegou ao seu destino, ' + nm(n.dest) + '. Confirme sua localização antes de prosseguir.' + (n.dest.id === STOPS.length ? ' Fim da linha.' : '') + ' Ao descer, cuidado com o degrau e com o trânsito.' + (n.sim ? ' Fim da simulação. Voltando ao modo real.' : '');
 /** Coordena um evento: marca (uma vez só), pede a vibração, toca o som do mesmo ritmo, fala e registra. Devolve false se já tinha acontecido. */
 async function avisar(n, tipo, stop, texto, extra) {
   const key = tipo + ':' + (stop ? stop.id : '-') + (extra ? ':' + extra : '');
@@ -1259,9 +1732,9 @@ function whereReal(n) {
   const g = n.lastNearAll, s = STOPS[n.idx], l = n.dest.id - s.id;
   return 'Pelo GPS, você está a ' + fmtD(g.d) + ' da parada ' + nm(g.s) + (n.acc ? ', com precisão de cerca de ' + Math.round(n.acc) + ' metros' : '') + '. A última parada registrada foi ' + nm(s) + '. Faltam ' + pl(l, 'parada', 'paradas') + ' até ' + nm(n.dest) + '.';
 }
-function where(n) { const s = STOPS[n.idx], l = n.dest.id - s.id; return 'Você está na parada ' + s.id + ', ' + nm(s) + '. Faltam ' + pl(l, 'parada', 'paradas') + ' até ' + nm(n.dest) + '.' + (n.sim ? ' Atenção: você está no modo simulação.' : ''); }
+function where(n) { const s = STOPS[n.idx], l = n.dest.id - s.id; return 'Você está na parada ' + s.id + ', ' + nm(s) + '. Faltam ' + tempoViagem(l) + ' até ' + nm(n.dest) + '.' + (n.sim ? ' Atenção: você está no modo simulação.' : ''); }
 function proximaTexto(n) { const nx = STOPS[Math.min(n.idx + 1, n.dest.id - 1)], d = dist(n.lastPos || STOPS[n.idx], nx); return 'A próxima parada é a ' + rotuloParada(nx) + (nx.id === n.dest.id ? ', o seu destino' : '') + '. Distância aproximada: ' + fmtD(d) + '.'; }
-function jaChegou(n) { const l = n.dest.id - STOPS[n.idx].id; return 'Ainda não. ' + (l <= 1 ? 'Seu destino, ' + nm(n.dest) + ', é a próxima parada. Prepare-se para desembarcar.' : 'Faltam ' + pl(l, 'parada', 'paradas') + ' até ' + nm(n.dest) + '. A próxima é ' + nm(STOPS[n.idx + 1]) + '.') + (n.sim ? ' Atenção: você está no modo simulação.' : ''); }
+function jaChegou(n) { const l = n.dest.id - STOPS[n.idx].id; return 'Ainda não. ' + (l <= 1 ? 'Seu destino, ' + nm(n.dest) + ', é a próxima parada. Prepare-se para desembarcar.' : 'Faltam ' + tempoViagem(l) + ' até ' + nm(n.dest) + '. A próxima é ' + nm(STOPS[n.idx + 1]) + '.') + (n.sim ? ' Atenção: você está no modo simulação.' : ''); }
 /** "Repete o sinal": repete o áudio E o padrão tátil do último evento (ou explica, por voz, por que não vibra). */
 async function repetirSinal(n) {
   const u = n.ultimo; if (!u) { await reply(n, 'Ainda não houve nenhum sinal nesta viagem.'); return; }
@@ -1296,7 +1769,7 @@ async function vibCmd(m) {
 const RE_REP_SINAL = /\b(repet\w*|de novo|outra vez)\b.*\b(sinal|vibracao|padrao)\b|\b(sinal|vibracao) de novo\b|\bvibra de novo\b/;
 const RE_JA_CHEGOU = /\b(ja chegamos|ja cheguei|ja chegou|chegamos|cheguei|falta muito)\b/;
 const RE_ONDE = /\b(onde estou|onde eu estou|onde estamos|em (que|qual) parada (eu )?(estou|estamos|esta)|que parada e essa|qual (e )?(a )?parada atual)\b/;
-const HELP = 'Você pode dizer: qual é a próxima parada. Em que parada estamos. Já chegamos. Repete a informação. Repete o sinal da parada, para sentir a vibração de novo. Testar vibração, ou desligar vibração. Estou na, e o nome da rua, para eu confirmar com o GPS. Previsão. Avançar, para pular uma parada na simulação. Parar. Continuar. Modo real, ou ativar simulação. Ou sair, para encerrar a viagem. Em emergência, diga sua palavra-chave ou preciso de ajuda.';
+const HELP = 'Você pode dizer: qual é a próxima parada. Em que parada estamos. Já chegamos. Repete a informação. Repete o sinal da parada, para sentir a vibração de novo. Testar vibração, ou desligar vibração. Estou na, e o nome da rua, para eu confirmar com o GPS. Previsão. Avançar, para pular uma parada na simulação. Parar. Continuar. Modo real, ou ativar simulação. Ou sair, para encerrar a viagem. Em emergência, repita sua palavra-chave duas vezes em até quatro segundos, ou diga preciso de ajuda.';
 async function reply(n, text) { S.ans = { q: n.asked || '', a: text }; if (S.view === 'route' || S.view === 'near') show(S.view); await speak(text); }
 async function navCmd(n, c) {
   const m = c;
@@ -1327,9 +1800,9 @@ async function runTrip(t) {
   mainHandler = async alts => { if (busy) return; busy = true; n.asked = alts[0]; try { for (const a of alts) { if (await navCmd(n, norm(a))) return; } sound('err'); } finally { busy = false; } };
   const L = t.dest.id - (n.idx + 1); S.ans = null; saveTrip({ origin: n.origin.id, dest: n.dest.id, idx: n.idx, sim: n.sim }); drawTrip();
   if (n.sim && rs) {
-    await speak('Retomando o trajeto até ' + nm(t.dest) + '. Você está na parada ' + nm(STOPS[n.idx]) + '. Faltam ' + pl(L, 'parada', 'paradas') + ' até o destino. Atenção: você está no modo simulação.');
+    await speak('Retomando o trajeto até ' + nm(t.dest) + '. Você está na parada ' + nm(STOPS[n.idx]) + '. Faltam ' + pl(L, 'parada', 'paradas') + ' até o destino, cerca de ' + pl(duracaoMin(L), 'minuto', 'minutos') + ' de viagem. Atenção: você está no modo simulação.');
   } else if (n.sim) {
-    await speak('Perfeito. Simulando o trajeto da linha 875C-10 até ' + nm(t.dest) + '. Você está na parada ' + nm(t.origin) + '. Faltam ' + pl(L, 'parada', 'paradas') + ' até o destino. Atenção: você está no modo simulação.');
+    await speak('Perfeito. Simulando o trajeto da linha 875C-10 até ' + nm(t.dest) + '. Você está na parada ' + nm(t.origin) + '. Faltam ' + pl(L, 'parada', 'paradas') + ' até o destino, cerca de ' + pl(duracaoMin(L), 'minuto', 'minutos') + ' de viagem. Atenção: você está no modo simulação.');
   } else {
     n.lastFix = Date.now();
     watch = navigator.geolocation.watchPosition(p => watchTick(n, p.coords), e => { if (e.code === 1) { n.paused = true; avisar(n, 'atencao', null, 'Atenção: a permissão de localização foi retirada, então parei de acompanhar as paradas. Diga modo real quando liberar, ou ativar simulação.', 'permissao'); } }, { enableHighAccuracy: true, maximumAge: 2000, timeout: 20000 });
@@ -1338,7 +1811,7 @@ async function runTrip(t) {
       n.semSinal = true; n.perdas = (n.perdas || 0) + 1;
       avisar(n, 'atencao', null, 'Atenção: estou sem sinal de GPS, então posso não perceber as paradas. Vou continuar tentando. Se souber onde está, diga estou na, e o nome da rua.', 'gps' + n.perdas);
     }, 2000);
-    await speak(rs ? 'Retomando o trajeto até ' + nm(t.dest) + '. Você estava na parada ' + nm(STOPS[n.idx]) + '. Faltam ' + pl(L, 'parada', 'paradas') + '. Eu aviso cada parada pelo GPS.' : 'Navegação iniciada até ' + nm(t.dest) + ', linha 875C-10. Faltam ' + pl(L, 'parada', 'paradas') + '. Eu aviso cada parada pelo GPS. Diga ajuda para ouvir os comandos.');
+    await speak(rs ? 'Retomando o trajeto até ' + nm(t.dest) + '. Você estava na parada ' + nm(STOPS[n.idx]) + '. Faltam ' + pl(L, 'parada', 'paradas') + ', cerca de ' + pl(duracaoMin(L), 'minuto', 'minutos') + ' de viagem. Eu aviso cada parada pelo GPS.' : 'Navegação iniciada até ' + nm(t.dest) + ', linha 875C-10. Faltam ' + pl(L, 'parada', 'paradas') + ', cerca de ' + pl(duracaoMin(L), 'minuto', 'minutos') + ' de viagem. Eu aviso cada parada pelo GPS. Diga ajuda para ouvir os comandos.');
   }
   if (n.phase !== 'done') await inicioSinais(n);
   if (n.sim && n.phase !== 'done' && !n.paused) schedule(n);
@@ -1367,9 +1840,15 @@ async function mainLoop(first, saved, greet) {
       saveTrip({ origin: trip.origin.id, dest: trip.dest.id, idx: trip.origin.id - 1, sim: false, phase: 'walk' });
       const r = await walkToStop(trip.origin); if (r !== 'arrived') { clearTrip(); first = 'Para onde você gostaria de ir?'; continue; }
     }
-    if (S.sim && !trip.resume) { /* simulação: antes de embarcar, o ônibus simulado se aproxima e chega, com voz, som e vibração */
-      const rb = await busArrivalSim(trip);
-      if (rb === 'cancel') { clearTrip(); if (S.sim) { S.sim = false; S.modeChosen = false; setSimBanner(); await speak('Voltando ao modo real.'); } first = 'Para onde você gostaria de ir?'; continue; }
+    if (!trip.resume) {
+      const voltar = async () => { clearTrip(); if (S.sim) { S.sim = false; S.modeChosen = false; setSimBanner(); await speak('Voltando ao modo real.'); } first = 'Para onde você gostaria de ir?'; };
+      if (S.sim) { /* simulação: primeiro guia até o ponto */
+        const w = await walkSim(trip.origin);
+        if (w === 'cancel') { await voltar(); continue; }
+      }
+      const rb = S.sim ? await busArrivalSim(trip) : await busArrivalReal(trip); /* ônibus chegando: simulado ou previsão real */
+      if (rb === 'cancel') { await voltar(); continue; }
+      await speak(INSTR_DENTRO);
     }
     const fim = await runTrip(trip); /* a tela de chegada fica visível durante a pergunta */
     if (S.sim) { S.sim = false; S.modeChosen = false; setSimBanner(); if (fim === 'cancel') await speak('Voltando ao modo real.'); } /* a simulação não fica ligada nas próximas viagens: o padrão é o GPS real */
@@ -1387,28 +1866,43 @@ function saudacao(d) { const h = (d || new Date()).getHours(); return h >= 5 && 
 /* Memória: antes de falar qualquer coisa, verifica em silêncio perfil, microfone e localização. */
 async function boot() {
   show('say'); setState('idle');
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {} /* pede ao navegador para não apagar a memória (cadastro) do aparelho */
   if (!SR) { setCaption('Este navegador não tem reconhecimento de voz. Abra o GuIa no Chrome.'); await speak('Este navegador não tem reconhecimento de voz. Abra o Guia no Chrome do Android ou do computador.'); return; }
-  const profile = store.get('profile');
+  await carregarParadas();
+  /* O aviso da lista aproximada sai no máximo uma vez por dia, para a abertura continuar curta: só a saudação. */
+  S.avisoParadas = (!S.paradasOficiais && Date.now() - (store.get('avisoParadas') || 0) > 24 * 3600e3) ? ' Atenção: ainda estou usando uma lista aproximada de paradas, que pode estar desatualizada.' : '';
+  if (S.avisoParadas) store.set('avisoParadas', Date.now());
+  let profile = store.get('profile');
+  /* MEMÓRIA DO USUÁRIO: identifica quem já se cadastrou neste navegador/aparelho,
+     preserva nome e hash de segurança e atualiza a última utilização sem repetir cadastro. */
+  const returningUser = !!(profile && profile.name);
+  if (returningUser) {
+    profile = { ...profile, lastUsedAt: Date.now(), visits: (Number(profile.visits) || 0) + 1 };
+    store.set('profile', profile);
+  }
   const [mic, geo] = await Promise.all([permState('microphone'), permState('geolocation')]);
   if (mic === 'granted') { S.micOK = true; startRec(); }
-  if (geo === 'granted') S.geoOK = true;
-  const greet = profile ? saudacao() + ', ' + profile.name + '.' : 'Bem-vindo ao Guia.';
+  if (geo === 'granted') { S.geoOK = true; warmUp(); }
+  let greet = returningUser ? saudacao() + ', ' + profile.name + '.' : saudacao() + '! Bem-vindo ao GuIa.';
+  if (returningUser) greet += await vincSync();
+  greet += S.avisoParadas;
   if (profile && S.micOK && S.geoOK) { /* recorrente com tudo autorizado: pula cadastro e permissões */
     if (prefs.vib === undefined) prefs.vib = true; if (prefs.notif === undefined) prefs.notif = false;
     sound('ok'); const sv = validTrip();
     return sv ? mainLoop(null, sv, greet) : mainLoop(greet + ' Estou ouvindo. Para onde você gostaria de ir hoje?');
   }
-  await speak(greet + ' Estou ouvindo.');
+  await speak(greet + (returningUser ? ' Vou verificar as permissões necessárias para continuarmos.' : ' Estou ouvindo.'));
   if (!S.micOK) await ensureMic();
   if (!S.geoOK) await ensureGeo();
   await ensureExtras();
-  if (!profile) await register();
+  /* Só cadastra a primeira vez. Permissão revogada não apaga a identidade salva. */
+  if (!profile) { await register(); profile = store.get('profile'); }
   const sv2 = profile ? validTrip() : null;
   return mainLoop(profile ? 'Para onde você gostaria de ir hoje?' : 'Para onde você deseja ir?', sv2, '');
 }
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 window.addEventListener('load', () => boot().catch(e => { console.error(e); setCaption('Algo falhou. Recarregue a página.'); }));
-window.Guia = { validTrip, setDial: f => { dialFn = f; }, saudacao, E, S, STOPS, deliver, reconhecerParada, store, speak, show, setState, EMG, BUS, busArrivalSim, emgTrigger, NAV, PADROES_VIBRACAO, EVENTOS_LOG, vibrar, vibStatus };
+window.Guia = { LAT, validTrip, setDial: f => { dialFn = f; }, saudacao, E, S, STOPS, deliver, reconhecerParada, store, speak, show, setState, EMG, BUS, busArrivalSim, emgTrigger, NAV, PADROES_VIBRACAO, EVENTOS_LOG, vibrar, vibStatus };
 </script>
 </body>
 </html>
