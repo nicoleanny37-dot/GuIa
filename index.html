@@ -392,7 +392,7 @@ if (typeof module !== "undefined") {
 <script>
 /* Fonte da previsão dos ônibus (tempo real). Cole aqui o endereço do intermediário (veja previsao-worker.js). Vazio = sem previsão. */
 /* apiUrl = endereço do servidor intermediário (guia-api): Telegram do responsável + previsão. Veja guia-api/README.md. */
-window.GUIA_CONFIG = window.GUIA_CONFIG || { previsaoUrl: 'https://guia-previsao.nicoleanny37.workers.dev', apiUrl: '' };
+window.GUIA_CONFIG = window.GUIA_CONFIG || { previsaoUrl: 'https://guia-previsao.nicoleanny37.workers.dev', apiUrl: 'https://guia-previsao.nicoleanny37.workers.dev' };
 </script>
 <script>
 'use strict';
@@ -1281,7 +1281,7 @@ function aplicarParadas(lista, origem) {
   const sig = novas.length + '|' + novas[0].codigo + '|' + novas[novas.length - 1].codigo;
   if (store.get('paradasSig') !== sig) { clearTrip(); store.set('paradasSig', sig); } /* viagem salva com a lista antiga não vale mais */
 }
-const listaOk = l => Array.isArray(l) && l.length >= 2 && l.every(x => x && Number.isFinite(x.lat) && Number.isFinite(x.lng));
+const listaOk = l => Array.isArray(l) && l.length >= 15 && l.every(x => x && Number.isFinite(x.lat) && Number.isFinite(x.lng));
 async function carregarParadas() {
   const c = store.get('paradas'), fresco = c && listaOk(c.lista) && Date.now() - c.t < 24 * 3600e3;
   if (c && listaOk(c.lista)) aplicarParadas(c.lista, 'cache');
