@@ -110,10 +110,13 @@ body[data-s=listening] .mic::after{animation:ring 1.6s ease-out .8s infinite}
 .emgcall{margin:0 24px calc(22px + env(safe-area-inset-bottom,0px));pointer-events:auto;text-decoration:none;flex:none}
 .emgcall:focus-visible{outline:4px solid var(--text);outline-offset:3px}
 .emgcall[hidden]{display:none}
+.txtfalha{margin:0 24px calc(22px + env(safe-area-inset-bottom,0px));min-height:56px;border-radius:999px;border:2px solid var(--text);background:var(--bg);color:var(--text);font:600 18px var(--font);padding:0 22px;user-select:text;-webkit-user-select:text;pointer-events:auto;flex:none}
+.txtfalha[hidden]{display:none}
+.txtfalha:focus-visible{outline:4px solid var(--text);outline-offset:3px}
 </style>
 </head>
 <body>
-<div class="stage"><div class="phone" id="phone"><div class="view" id="view" aria-hidden="true"></div><a class="btn emgcall" id="emgcall" href="#" hidden></a></div></div>
+<div class="stage"><div class="phone" id="phone"><div class="view" id="view" aria-hidden="true"></div><a class="btn emgcall" id="emgcall" href="#" hidden></a><input class="txtfalha" id="textoFalha" type="text" inputmode="text" enterkeyhint="send" autocomplete="off" autocapitalize="sentences" aria-label="Campo de texto de reserva. Digite ou use o ditado do teclado e confirme com Enter." placeholder="Digite ou dite aqui e toque em Enter" hidden></div></div>
 <script>
 /* ==========================================================================
    linha875c10.js — ARQUIVO MESTRE DE TRAJETO da linha 875C-10
@@ -437,7 +440,7 @@ function locHTML(n) {
   return '<div class="loc real">' + ic('pin') + '<span><b>Localização real (GPS)</b><small>' + (g ? 'A ' + fmtD(g.d) + ' da parada ' + esc(nm(g.s)) + (n.acc ? ' · precisão de ' + Math.round(n.acc) + ' m' : '') : 'Procurando o sinal de GPS…') + '</small></span></div>';
 }
 const eq = '<span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>';
-const PILL = { speaking: ['Falando em voz alta', 'vol'], listening: ['Ouvindo…', 'mic'], idle: ['Aguardando', 'mic'], blocked: ['Microfone bloqueado', 'alert'] };
+const PILL = { speaking: ['Falando em voz alta', 'vol'], listening: ['Ouvindo…', 'mic'], idle: ['Aguardando', 'mic'], blocked: ['Microfone bloqueado', 'alert'], processing: ['Entendendo…', 'bars'] };
 const pillHTML = () => '<span class="pill" data-pill>' + eq + '<span data-pill-txt>' + PILL[S.st || 'idle'][0] + '</span></span>';
 const simNote = () => S.sim ? '<p class="sim">Modo simulação: a posição é simulada, não é o GPS.</p>' : '';
 function setState(s) {
@@ -638,7 +641,7 @@ function speak(text, o) {
         speaking = false;
         lastEnd = Date.now();
         setState('idle');
-        if (S.micOK && !S.blocked) startRec();
+        if (S.micOK && !S.blocked) startRec(Math.max(REC.afterSpeechMs, recFails ? backoffMs() : 0)); /* depois da fala, respeita o recuo se o microfone vinha falhando */
       }
       res();
     };
@@ -705,17 +708,41 @@ function agendarRapido(alts, key) {
     fastDone.set(key, now); LAT.via = 'rapido'; deliver(alts); /* o resultado final desta mesma fala será ignorado, para não contar duas vezes */
   }, FAST_MS);
 }
-function startRec() {
-  if (!SR || recRunning || !S.micOK || S.blocked || speaking) return;
+/* ---------- escuta: configuração e estado (um único reconhecedor por vez) ---------- */
+const REC = {
+  continuous: !MOBILE,        /* no celular o modo contínuo repete e duplica o texto: cada frase é uma sessão curta, reaberta na hora */
+  preferLocal: false,         /* a nuvem acerta mais nomes de ruas; o reconhecimento no aparelho entra offline ou quando a rede falha */
+  mergeMs: MOBILE ? 500 : 0,  /* no celular, junta pedaços da mesma frase separados por uma pausa natural */
+  readyMaxMs: 1800,           /* espera o microfone abrir de verdade antes do sinal "pode falar" */
+  afterSpeechMs: MOBILE ? 150 : 0,
+  startWatchMs: 3000          /* se o microfone não abrir (ou não captar áudio) em 3 s, derruba e tenta de novo */
+};
+let recStarting = false, recFails = 0, recWatch = null, mergeBuf = null, mergeT = null;
+const backoffMs = () => recFails ? Math.min(4000, 150 * Math.pow(2, recFails - 1)) : (MOBILE ? 40 : 30);
+function startRec(delay) {
+  if (!SR || !S.micOK || S.blocked || speaking || S.testandoMic) return;
+  if (rec || recStarting || recRunning) return; /* já existe um reconhecedor ativo ou abrindo: nunca cria um segundo */
+  if (delay) { if (!recRestartTimer) recRestartTimer = setTimeout(() => { recRestartTimer = null; startRec(); }, delay); return; }
   if (recRestartTimer) { clearTimeout(recRestartTimer); recRestartTimer = null; }
-  const r = new SR(), sid = ++recSid; r.lang = 'pt-BR'; r.continuous = true; r.interimResults = true; r.maxAlternatives = 3; rec = r;
-  try { if ('processLocally' in r) r.processLocally = !S.noLocal && (!!S.localOK || !navigator.onLine); } catch (e) {}
-  const t0 = performance.now();
-  r.onstart = () => { recRunning = true; LAT.micOpen = Math.round(performance.now() - t0); if (!speaking) setState('listening'); };
-  r.onspeechstart = () => { if (!speaking) S.ouvindoFala = Date.now(); };
+  const r = new SR(), sid = ++recSid, t0 = performance.now(), t0w = Date.now(); let gotAudio = false;
+  r.lang = 'pt-BR'; r.continuous = REC.continuous; r.interimResults = true; r.maxAlternatives = 3; rec = r; recStarting = true;
+  try { if ('processLocally' in r) r.processLocally = !S.noLocal && (navigator.onLine === false || (S.netFails || 0) >= 2 || (REC.preferLocal && !!S.localOK)); } catch (e) {}
+  const retoma = () => { if (S.micOK && !S.blocked && !speaking) startRec(backoffMs()); };
+  clearTimeout(recWatch);
+  recWatch = setTimeout(() => { /* vigia: microfone "ligado" na tela, mas sem abrir ou sem captar áudio */
+    if (rec !== r || !(recStarting || (S.audioEvt && !gotAudio))) return;
+    recFails++; rec = null; recRunning = false; recStarting = false;
+    try { r.onend = r.onresult = r.onerror = r.onstart = r.onaudiostart = r.onspeechstart = r.onspeechend = null; r.abort(); } catch (e) {}
+    if (recFails >= 3) falhaVoz('generico');
+    retoma();
+  }, REC.startWatchMs);
+  r.onstart = () => { recStarting = false; recRunning = true; LAT.micOpen = Math.round(performance.now() - t0); if (!speaking) setState('listening'); };
+  r.onaudiostart = () => { gotAudio = true; S.audioEvt = true; S.ultimoAudio = Date.now(); };
+  r.onspeechstart = () => { if (!speaking) S.ouvindoFala = Date.now(); if (mergeBuf) { clearTimeout(mergeT); mergeT = setTimeout(soltarMerge, REC.mergeMs + 1200); } };
   r.onspeechend = () => { S.ouvindoFala = 0; LAT.mark('fimFala'); };
   r.onresult = e => {
-    S.ouvindoFala = 0;
+    S.ouvindoFala = 0; recFails = 0; S.netFails = 0; S.falhas = 0; S.naoPerm = 0;
+    if (mergeBuf) { clearTimeout(mergeT); mergeT = setTimeout(soltarMerge, REC.mergeMs + 600); }
     for (let i = e.resultIndex; i < e.results.length; i++) {
       const res = e.results[i], alts = Array.from(res).map(a => a.transcript).filter(Boolean);
       if (!alts.length) continue;
@@ -723,33 +750,101 @@ function startRec() {
       if (res.isFinal) {
         clearTimeout(interimT);
         if (fastDone.has(key)) { fastDone.delete(key); continue; }
-        LAT.via = 'final'; deliver(alts);
+        entregarFinal(alts);
       } else if (i === e.results.length - 1) agendarRapido(alts, key);
     }
   };
   r.onerror = e => {
-    if (e.error === 'language-not-supported') { S.noLocal = true; S.localOK = false; }
-    if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-      S.micOK = false; S.blocked = true; setState('blocked');
+    const er = e && e.error;
+    if (er === 'aborted' || er === 'no-speech') return; /* normais: o onend reabre a escuta */
+    if (er === 'not-allowed' || er === 'service-not-allowed') {
+      rec = null; recRunning = false; recStarting = false; clearTimeout(recWatch);
+      S.micOK = false; S.blocked = true; setState('blocked'); S.naoPerm = (S.naoPerm || 0) + 1;
+      if (er === 'service-not-allowed' || S.naoPerm >= 3) ativarTexto('servico'); else recuperarMic();
+      return;
     }
+    if (er === 'language-not-supported') { S.noLocal = true; S.localOK = false; }
+    recFails++; if (er === 'network') S.netFails = (S.netFails || 0) + 1;
+    if (recFails >= 3) falhaVoz(er);
   };
   r.onend = () => {
-    S.ouvindoFala = 0;
+    S.ouvindoFala = 0; clearTimeout(recWatch);
     if (rec !== r) return;
-    recRunning = false;
-    if (S.micOK && !S.blocked && !speaking) recRestartTimer = setTimeout(() => { recRestartTimer = null; startRec(); }, 30);
+    if (Date.now() - t0w < 400 && !gotAudio) recFails++; /* encerrou na hora, sem captar nada: conta como falha para o recuo não virar laço apertado */
+    rec = null; recRunning = false; recStarting = false;
+    retoma();
   };
   try { r.start(); }
-  catch (e) {
-    recRunning = false; if (rec === r) rec = null;
-    if (S.micOK && !S.blocked && !speaking) recRestartTimer = setTimeout(() => { recRestartTimer = null; startRec(); }, 150);
-  }
+  catch (e) { rec = null; recRunning = false; recStarting = false; clearTimeout(recWatch); recFails++; retoma(); }
 }
 function stopRec() {
-  clearTimeout(interimT);
+  clearTimeout(interimT); clearTimeout(recWatch);
   if (recRestartTimer) { clearTimeout(recRestartTimer); recRestartTimer = null; }
-  const r = rec; rec = null; recRunning = false;
-  if (r) { r.onend = r.onresult = r.onerror = r.onstart = null; try { r.abort(); } catch (e) {} }
+  const r = rec; rec = null; recRunning = false; recStarting = false;
+  if (r) { r.onend = r.onresult = r.onerror = r.onstart = r.onaudiostart = r.onspeechstart = r.onspeechend = null; try { r.abort(); } catch (e) {} }
+}
+/** Espera o microfone abrir de verdade (evento onstart), para o sinal "pode falar" não tocar antes da hora. */
+function recPronto(ms) {
+  return new Promise(res => {
+    if (!SR || !S.micOK || S.blocked) return res(false);
+    const t0 = Date.now();
+    (function c() { if (recRunning) return res(true); if (Date.now() - t0 > ms || !S.micOK || S.blocked) return res(false); setTimeout(c, 40); })();
+  });
+}
+/** Frases curtas e a emergência saem na hora; no celular, o resto espera um instante para juntar pedaços da mesma frase. */
+function soltarMerge() { clearTimeout(mergeT); mergeT = null; const b = mergeBuf; mergeBuf = null; if (b) deliver(b); }
+async function entregarFinal(alts) {
+  LAT.via = 'final';
+  let urgente = alts.some(a => { const n = norm(a); return FAST_RE.test(n) || RE_SOCORRO.test(n); });
+  if (!urgente) { try { urgente = !!(await emgMatch(alts)); } catch (e) {} }
+  if (!REC.mergeMs || urgente || E.phase || speaking) { soltarMerge(); return deliver(alts); }
+  if (mergeBuf) alts = [mergeBuf[0] + ' ' + alts[0]].concat(alts.slice(1));
+  mergeBuf = alts; clearTimeout(mergeT); mergeT = setTimeout(soltarMerge, REC.mergeMs);
+}
+function processando() { setState('processing'); clearTimeout(S.procT); S.procT = setTimeout(() => { if (S.st === 'processing' && !speaking) setState(recRunning ? 'listening' : 'idle'); }, 3500); }
+/** Teste real do microfone: a faixa está ativa, não está silenciada e chega som (silêncio digital absoluto = microfone mudo ou bloqueado). */
+async function testarMicrofone() {
+  let st = null, ctx = null; S.testandoMic = true; stopRec();
+  try {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return { ok: false, motivo: 'sem-api' };
+    st = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const t = st.getAudioTracks()[0];
+    if (!t || t.readyState !== 'live') return { ok: false, motivo: 'faixa-encerrada' };
+    for (let k = 0; t.muted && k < 10; k++) await sleep(50);
+    if (t.muted) return { ok: false, motivo: 'silenciado' };
+    const AC = window.AudioContext || window.webkitAudioContext; ctx = new AC(); try { await ctx.resume(); } catch (e) {}
+    const an = ctx.createAnalyser(); an.fftSize = 512; ctx.createMediaStreamSource(st).connect(an);
+    const buf = new Uint8Array(an.fftSize); let pico = 0; const t0 = performance.now();
+    while (performance.now() - t0 < 900) { an.getByteTimeDomainData(buf); for (let k = 0; k < buf.length; k++) pico = Math.max(pico, Math.abs(buf[k] - 128)); await sleep(60); }
+    return pico > 0 ? { ok: true, motivo: 'ok', pico } : { ok: false, motivo: 'sem-som', pico };
+  } catch (e) { return { ok: false, motivo: (e && e.name) || 'erro' }; }
+  finally { try { st && st.getTracks().forEach(x => x.stop()); } catch (e) {} try { ctx && ctx.close(); } catch (e) {} S.testandoMic = false; if (S.micOK && !S.blocked && !speaking) startRec(); }
+}
+/** Avisa por voz o que deu errado e como tentar de novo (no máximo uma vez a cada 45 s; na terceira vez abre o campo de texto). */
+async function falhaVoz(tipo) {
+  const agora = Date.now(); if (agora - (S.falhaT || 0) < 45000 || S.testandoMic) return; S.falhaT = agora; S.falhas = (S.falhas || 0) + 1;
+  let msg;
+  if (tipo === 'network') msg = 'Estou com dificuldade para ouvir você: a internet parece instável. Verifique a conexão. Vou continuar tentando.';
+  else if (tipo === 'audio-capture' || tipo === 'mudo') {
+    const t = await testarMicrofone();
+    msg = t.ok ? 'O microfone está captando som, mas não consegui entender. Fale um pouco mais perto e mais devagar.'
+      : 'O microfone não está enviando som. Veja se ele não está silenciado ou coberto, se outro aplicativo, como uma ligação ou um gravador, não está usando o microfone, e se o GuIa tem permissão. Vou continuar tentando.';
+  } else msg = 'Estou com dificuldade para escutar. Vou continuar tentando. Se o problema continuar, feche e abra o GuIa de novo.';
+  if (S.falhas >= 3) ativarTexto('persistente');
+  if (S.asking) S.avisoVoz = msg; else speak(msg);
+}
+/** Microfone negado durante o uso: repete o passo a passo para liberar (o mesmo do início) e volta a escutar sozinho. */
+async function recuperarMic() {
+  if (S.recuperando) return; S.recuperando = true;
+  try { await ensureMic(); } catch (e) {} finally { S.recuperando = false; }
+}
+/** Alternativa viável quando a voz não funciona: um campo de texto real, acessível, onde o ditado do teclado do celular também vale. */
+function ativarTexto(motivo) {
+  if (S.textMode) return; S.textMode = true;
+  const i = $('textoFalha'); if (i) i.hidden = false;
+  const inicio = motivo === 'sem-suporte' ? 'Este navegador não tem reconhecimento de voz.' : motivo === 'servico' ? 'O navegador não está deixando o GuIa usar o reconhecimento de voz.' : 'Não consegui fazer o reconhecimento de voz funcionar.';
+  const fala = inicio + ' Abri um campo de texto na parte de baixo da tela. Use o ditado do teclado do celular ou digite, e confirme com o Enter. Para usar só a voz, abra o GuIa no Chrome.';
+  if (S.asking) S.avisoVoz = fala; else speak(fala);
 }
 /* ---------- emergência: palavra-chave cadastrada OU pedido de ajuda falado, em qualquer estado do app ----------
    Fluxo: som + vibração própria → frase curta → abre o discador do telefone direto (modo real e simulação, sem confirmação).
@@ -846,7 +941,7 @@ async function emgHear(alts) {
   E.busy = true;
   try { await emgCmd(ns); } finally { E.busy = false; }
 }
-async function deliver(alts) {
+async function deliver(alts, typed) {
   LAT.mark('entrega');
   if (E.phase) return emgHear(alts);
   const matchedKeyword = await emgMatch(alts);
@@ -861,8 +956,9 @@ async function deliver(alts) {
   }
   if (Date.now() - emgKeywordFirst.at > EMG_REPEAT_MS) emgKeywordFirst = { word: '', at: 0 };
   if (alts.some(a => { const n = norm(a); return RE_SOCORRO.test(n) && !echoText(n); })) return emgTrigger('pedido de ajuda');
-  if (speaking || Date.now() - lastEnd < 300) return; /* ignora o eco da própria voz do Guia */
-  const ls = S.lastSpoken || ''; alts = alts.filter(a => { const n = norm(a); return !(n.split(' ').length >= 4 && ls.indexOf(n) >= 0); }); if (!alts.length) return;
+  if (!typed && (speaking || Date.now() - lastEnd < 300)) return; /* ignora o eco da própria voz do Guia */
+  const ls = S.lastSpoken || ''; if (!typed) alts = alts.filter(a => { const n = norm(a); return !(n.split(' ').length >= 4 && ls.indexOf(n) >= 0); }); if (!alts.length) return;
+  processando();
   if (!S.secret) setHeard(alts[0]); if (waiter) { const w = waiter; waiter = null; w(alts); } else if (mainHandler) mainHandler(alts); }
 function listenOnce(ms) { return new Promise(res => { const t = setTimeout(() => { waiter = null; res(null); }, ms); waiter = a => { clearTimeout(t); res(a); }; }); }
 
@@ -955,14 +1051,18 @@ async function globalCmd(n) {
   return false;
 }
 /** Pergunta por voz, ouve e repete a pergunta se houver silêncio. Nunca fica travado esperando toque. */
-async function ask(prompt, parse, o) {
-  o = o || {}; let p = prompt; S.secret = !!o.raw; if (!S.secret && o.view !== 'keep') setHeard('');
+async function ask(prompt, parse, o) { S.asking = (S.asking || 0) + 1; try { return await askCore(prompt, parse, o); } finally { S.asking--; } }
+async function askCore(prompt, parse, o) {
+  o = o || {}; let p = prompt, mudo = 0; S.secret = !!o.raw; if (!S.secret && o.view !== 'keep') setHeard('');
   if (o.view !== 'keep') show(o.view || 'say', o.view === 'confirm' ? S.vdata : { hint: o.hint !== undefined ? o.hint : (parse === yn ? 'Diga sim ou não.' : ''), tip: o.tip });
   for (;;) {
     while (E.phase || S.hold) await sleep(200); /* durante a emergência (e logo depois dela) o Guia não atropela a fala do alerta */
-    await speak(p); if (S.micOK) sound('listen');
+    if (S.avisoVoz) { p = S.avisoVoz + ' ' + p; S.avisoVoz = null; }
+    await speak(p);
+    if (S.micOK && !S.blocked && SR) { if (!recRestartTimer) startRec(); if (await recPronto(REC.readyMaxMs)) sound('listen'); } /* o sinal só toca depois que o microfone abriu de verdade */
     const alts = await listenOnce(o.wait || 10000);
-    if (!alts) { p = o.again || prompt; continue; }
+    if (!alts) { mudo++; p = (mudo >= 2 ? 'Não ouvi nada. Fale um pouco mais perto do microfone. ' : '') + (o.again || prompt); if (mudo >= 3) falhaVoz('mudo'); continue; }
+    mudo = 0;
     if (!o.raw && !o.noGlobal) for (const a of alts) { if (await globalCmd(norm(a))) { p = o.again || prompt; alts.length = 0; break; } }
     if (!alts.length) continue;
     if (o.raw) { const r = parse(alts.map(norm)); if (r && r.retry) { p = r.retry; continue; } if (r !== undefined) { S.secret = false; sound('ok'); return r; } p = 'Não entendi. ' + (o.again || prompt); continue; }
@@ -994,6 +1094,7 @@ const NATIVE_PROMPT = 'O navegador vai mostrar uma pergunta na tela. Use seus ge
 function requestMic() { return navigator.mediaDevices.getUserMedia({ audio: true }).then(s => { s.getTracks().forEach(t => t.stop()); S.micOK = true; S.blocked = false; startRec(); return true; }, () => false); }
 /* Microfone: o Guia explica por voz e aciona o navegador (sem microfone ainda não há como ouvir o "sim", então o aviso do navegador já aparece). */
 async function ensureMic() {
+  if (!SR) { S.micOK = true; return; } /* sem reconhecimento de voz não há o que liberar: segue pelo campo de texto */
   for (;;) {
     const st = await permState('microphone');
     if (st === 'granted' || S.micOK) { S.micOK = true; S.blocked = false; startRec(); return; }
@@ -1293,24 +1394,37 @@ async function carregarParadas() {
 }
 /** Nome do bot do Telegram, informado pelo servidor (ex.: @GuIaAlertasBot). */
 async function botNome() { const r = await api('/', { timeout: 4000 }); return (r.dados && r.dados.bot) || ''; }
-const tgTexto = () => E.tg === 'ok' ? 'Alerta enviado pelo Telegram ao seu responsável.' : E.tg === 'enviando' ? 'Enviando alerta pelo Telegram…' : E.tg === 'falha' ? 'Não consegui enviar o alerta pelo Telegram.' : 'Nenhum responsável cadastrado no Telegram.';
+const tgDestino = () => E.tgDest === 'ambos' ? 'ao seu responsável e ao canal de alertas' : E.tgDest === 'canal' ? 'ao canal de alertas' : 'ao seu responsável';
+const tgTexto = () => E.tg === 'ok' ? 'Alerta enviado pelo Telegram ' + tgDestino() + '.' : E.tg === 'enviando' ? 'Enviando alerta pelo Telegram…' : E.tg === 'falha' ? 'Não consegui enviar o alerta pelo Telegram.' : 'Nenhum responsável cadastrado no Telegram.';
 async function emgEnvioFala() {
   try { await E.envio; } catch (e) {}
-  return E.tg === 'ok' ? (emgSim() ? 'Enviei uma mensagem de teste ao seu responsável pelo Telegram. ' : 'Também enviei um alerta ao seu responsável pelo Telegram. ') : E.tg === 'falha' ? 'Não consegui enviar o alerta pelo Telegram. ' : '';
+  return E.tg === 'ok' ? (emgSim() ? 'Enviei uma mensagem de teste pelo Telegram ' + tgDestino() + '. ' : 'Também enviei um alerta pelo Telegram ' + tgDestino() + '. ') : E.tg === 'falha' ? 'Não consegui enviar o alerta pelo Telegram. ' : '';
 }
-/** Manda o alerta pelo bot. Roda ao mesmo tempo em que o discador abre; nunca atrasa nem bloqueia a ligação. */
+/** Garante que este aparelho tem um UID no servidor (necessário para o alerta chegar ao canal, mesmo sem responsável). */
+async function garantirUid() {
+  const v = store.get('vinc'); if (v && v.uid) return v;
+  const pr = store.get('profile'); if (!pr || !API()) return null;
+  const r = await api('/vinculo/novo', { method: 'POST', body: { nome: pr.fullName || pr.name || 'Usuário' }, timeout: 6000 });
+  if (!r.dados || !r.dados.uid) return null;
+  const nv = { uid: r.dados.uid, contatos: [] }; store.set('vinc', nv); return nv;
+}
+/** Manda o alerta pelo bot: para cada responsável aceito e para o canal de alertas (se o servidor tiver um). Roda ao mesmo tempo em que o discador abre; nunca atrasa nem bloqueia a ligação. */
 async function emgAlertaTelegram() {
-  E.tg = 'enviando';
-  const v = store.get('vinc');
-  if (!v || !v.uid || !(v.contatos || []).length || !API()) { E.tg = 'sem'; return; }
+  E.tg = 'enviando'; E.tgDest = null;
+  if (!API()) { E.tg = 'sem'; return; }
   try {
+    const v = await garantirUid(); if (!v) { E.tg = 'sem'; return; }
     const n = S.nav, sim = emgSim();
     let pos = null;
     if (!sim && S.geoOK) { try { pos = await getPos(4000); } catch (e) { pos = S.lastPos0 || null; } }
     const body = { uid: v.uid, simulacao: sim, parada: n && STOPS[n.idx] ? nm(STOPS[n.idx]) : (S.lastSimStop ? nm(S.lastSimStop) : ''), destino: n && n.dest ? nm(n.dest) : '' };
     if (pos) { body.lat = pos.lat; body.lng = pos.lng; body.precisao = pos.accuracy; }
     const r = await api('/alerta', { method: 'POST', body, timeout: 8000 });
-    E.tg = (r.dados && r.dados.enviados > 0) || (r.erro === 'http' && r.status === 429) ? 'ok' : 'falha'; /* 429 = já enviado no último minuto */
+    const d = r.dados || {}, resp = d.enviados > 0, canal = !!d.canal;
+    if (resp || canal) { E.tg = 'ok'; E.tgDest = resp && canal ? 'ambos' : canal ? 'canal' : 'resp'; }
+    else if (r.erro === 'http' && r.status === 429) { E.tg = 'ok'; E.tgDest = 'resp'; } /* 429 = já enviado no último minuto */
+    else if (r.erro === 'http' && r.status === 409) E.tg = 'sem'; /* sem responsável e sem canal configurados */
+    else E.tg = 'falha';
   } catch (e) { E.tg = 'falha'; }
   if (E.phase) show('emg');
 }
@@ -1867,11 +1981,10 @@ function saudacao(d) { const h = (d || new Date()).getHours(); return h >= 5 && 
 async function boot() {
   show('say'); setState('idle');
   try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {} /* pede ao navegador para não apagar a memória (cadastro) do aparelho */
-  if (!SR) { setCaption('Este navegador não tem reconhecimento de voz. Abra o GuIa no Chrome.'); await speak('Este navegador não tem reconhecimento de voz. Abra o Guia no Chrome do Android ou do computador.'); return; }
+  if (!SR) ativarTexto('sem-suporte'); /* sem reconhecimento de voz: abre o campo de texto e segue o fluxo normal */
   await carregarParadas();
   /* O aviso da lista aproximada sai no máximo uma vez por dia, para a abertura continuar curta: só a saudação. */
   S.avisoParadas = (!S.paradasOficiais && Date.now() - (store.get('avisoParadas') || 0) > 24 * 3600e3) ? ' Atenção: ainda estou usando uma lista aproximada de paradas, que pode estar desatualizada.' : '';
-  if (S.avisoParadas) store.set('avisoParadas', Date.now());
   let profile = store.get('profile');
   /* MEMÓRIA DO USUÁRIO: identifica quem já se cadastrou neste navegador/aparelho,
      preserva nome e hash de segurança e atualiza a última utilização sem repetir cadastro. */
@@ -1883,9 +1996,10 @@ async function boot() {
   const [mic, geo] = await Promise.all([permState('microphone'), permState('geolocation')]);
   if (mic === 'granted') { S.micOK = true; startRec(); }
   if (geo === 'granted') { S.geoOK = true; warmUp(); }
+  if (profile) garantirUid().catch(() => {}); /* prepara o alerta do canal em segundo plano */
   let greet = returningUser ? saudacao() + ', ' + profile.name + '.' : saudacao() + '! Bem-vindo ao GuIa.';
   if (returningUser) greet += await vincSync();
-  greet += S.avisoParadas;
+  if (returningUser && S.avisoParadas) { greet += S.avisoParadas; store.set('avisoParadas', Date.now()); } /* o início do cadastro não fala da lista de paradas */
   if (profile && S.micOK && S.geoOK) { /* recorrente com tudo autorizado: pula cadastro e permissões */
     if (prefs.vib === undefined) prefs.vib = true; if (prefs.notif === undefined) prefs.notif = false;
     sound('ok'); const sv = validTrip();
@@ -1901,8 +2015,9 @@ async function boot() {
   return mainLoop(profile ? 'Para onde você gostaria de ir hoje?' : 'Para onde você deseja ir?', sv2, '');
 }
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+{ const tf = $('textoFalha'); if (tf) tf.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); const v = tf.value.trim(); if (v) { tf.value = ''; deliver([v], true); } } }); }
 window.addEventListener('load', () => boot().catch(e => { console.error(e); setCaption('Algo falhou. Recarregue a página.'); }));
-window.Guia = { LAT, validTrip, setDial: f => { dialFn = f; }, saudacao, E, S, STOPS, deliver, reconhecerParada, store, speak, show, setState, EMG, BUS, busArrivalSim, emgTrigger, NAV, PADROES_VIBRACAO, EVENTOS_LOG, vibrar, vibStatus };
+window.Guia = { REC, testarMicrofone, falhaVoz, ativarTexto, startRec, stopRec, entregarFinal, LAT, validTrip, setDial: f => { dialFn = f; }, saudacao, E, S, STOPS, deliver, reconhecerParada, store, speak, show, setState, EMG, BUS, busArrivalSim, emgTrigger, NAV, PADROES_VIBRACAO, EVENTOS_LOG, vibrar, vibStatus };
 </script>
 </body>
 </html>
