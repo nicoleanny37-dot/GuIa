@@ -1,0 +1,12 @@
+{
+  "name": "guia-worker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Cloudflare Worker do projeto GuIa — API de emergência",
+  "scripts": {
+    "build": "node construir.mjs",
+    "check": "node --check src/worker.js && node --check construir.mjs"
+  },
+  "devDependencies": {}
+}
