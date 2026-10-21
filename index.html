@@ -2014,7 +2014,11 @@ async function boot() {
   const sv2 = profile ? validTrip() : null;
   return mainLoop(profile ? 'Para onde você gostaria de ir hoje?' : 'Para onde você deseja ir?', sv2, '');
 }
-if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+/* O app não depende do arquivo sw.js. Se um sw.js antigo ficou instalado no aparelho, ele é removido junto com o cache antigo, para sempre abrir a versão nova. */
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) window.addEventListener('load', () => {
+  try { navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister())).catch(() => {}); } catch (e) {}
+  try { if (window.caches) caches.keys().then(ks => ks.filter(k => /^guia-/.test(k)).forEach(k => caches.delete(k))).catch(() => {}); } catch (e) {}
+});
 { const tf = $('textoFalha'); if (tf) tf.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); const v = tf.value.trim(); if (v) { tf.value = ''; deliver([v], true); } } }); }
 window.addEventListener('load', () => boot().catch(e => { console.error(e); setCaption('Algo falhou. Recarregue a página.'); }));
 window.Guia = { REC, testarMicrofone, falhaVoz, ativarTexto, startRec, stopRec, entregarFinal, LAT, validTrip, setDial: f => { dialFn = f; }, saudacao, E, S, STOPS, deliver, reconhecerParada, store, speak, show, setState, EMG, BUS, busArrivalSim, emgTrigger, NAV, PADROES_VIBRACAO, EVENTOS_LOG, vibrar, vibStatus };
